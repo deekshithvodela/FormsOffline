@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Forms Offline — Redirecting...</title>
+    <script type="text/javascript">
+      // GitHub Pages SPA 404 Clean URL Handler
+      // Preserves clean extensionless paths (e.g. /dashboard, /builder) and handles lowercase casing
+      (function() {
+        var pathSegmentsToKeep = 1;
+        var l = window.location;
+        var path = l.pathname;
+        
+        // Handle lowercase repository URL case sensitivity (/formsoffline -> /FormsOffline/)
+        if (path.toLowerCase().startsWith('/formsoffline')) {
+          var remaining = path.slice('/formsoffline'.length);
+          var correctedPath = '/FormsOffline' + remaining;
+          l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + correctedPath + l.search + l.hash);
+          return;
+        }
+
+        // SPA redirect encoding clean route into query parameter for index.html
+        l.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+          l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?' +
+          l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        );
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to Forms Offline...</p>
+  </body>
+</html>

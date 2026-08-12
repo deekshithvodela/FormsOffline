@@ -5,13 +5,79 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="theme-color" content="#0f172a" />
-    <meta name="description" content="Forms Offline — Zero-Backend, 100% Offline Data Digitization, Rapid Response Collection & CMS Tool" />
-    <meta property="og:title" content="Forms Offline — Zero Backend Data Digitization" />
-    <meta property="og:description" content="Author forms, collect high-speed offline field data, manage datasets with built-in version control, and export Excel files." />
+    
+    <!-- Primary Meta Tags -->
+    <title>Forms Offline — Zero Backend Data Digitization & Form Authoring Platform</title>
+    <meta name="title" content="Forms Offline — Zero Backend Data Digitization & Form Authoring Platform" />
+    <meta name="description" content="100% offline-first PWA for form authoring, Google & MS Form link importing, rapid field response collection, virtualized dataset CMS, and multi-sheet Excel exports." />
+    <meta name="keywords" content="offline forms, zero backend, form builder, google forms importer, PWA data collection, offline field data, indexeddb forms, excel exporter, E2EE forms" />
+    <meta name="author" content="Deekshith Vodela" />
+    
+    <!-- Mobile & PWA Web App Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Forms Offline" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- Open Graph / Facebook Metadata -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Forms Offline" />
+    <meta property="og:title" content="Forms Offline — Zero Backend Data Digitization & Form Authoring" />
+    <meta property="og:description" content="Author forms, collect high-speed offline field data, manage datasets with built-in version control, and export multi-sheet Excel workbooks." />
+    <meta property="og:image" content="https://deekshithvodela.github.io/FormsOffline/favicon.svg" />
+
+    <!-- Twitter Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Forms Offline — Zero Backend Data Digitization" />
+    <meta name="twitter:description" content="100% offline-first PWA for form building, rapid data entry, dataset CMS, and cross-device data consolidation." />
+    <meta name="twitter:image" content="https://deekshithvodela.github.io/FormsOffline/favicon.svg" />
+
+    <!-- Domain Preconnects -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <title>Forms Offline — Zero Backend Data Digitization</title>
+    <link rel="preconnect" href="https://gc.zgo.at" />
+
+    <!-- Privacy-Friendly Analytics (GoatCounter) -->
+    <script data-goatcounter="https://formsoffline.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
+    <!-- Clean Extensionless URL Restoration Script for GitHub Pages SPA -->
+    <script type="text/javascript">
+      (function(l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location));
+    </script>
+
+    <!-- JSON-LD Structured Data for Search Engine Indexers -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Forms Offline",
+      "alternateName": "FormsOffline",
+      "url": "https://deekshithvodela.github.io/FormsOffline/",
+      "description": "Zero-backend, 100% offline-first PWA for form authoring, Google/MS Form link importing, rapid field response collection, and dataset CMS.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Deekshith Vodela",
+        "url": "https://linktr.ee/deekshithvodela"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
