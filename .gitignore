@@ -1,0 +1,4 @@
+node_modules
+dist
+lighthouse-*.json
+.DS_Store

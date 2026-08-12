@@ -1,0 +1,1617 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw } from 'lucide-react';
+import { FormField, FormSection, FormTemplate, FieldType, FieldOption, FormTemplateSettings, UserProfile } from '../../core/types';
+import { db } from '../../db/database';
+import { generateTemplateFingerprint } from '../../core/fingerprint/templateHasher';
+import { getNextSectionId } from '../../core/branching/evaluator';
+import { SaveTemplateModal } from '../components/SaveTemplateModal';
+import { ResetCanvasModal } from '../components/ResetCanvasModal';
+import { LongPressTooltip } from '../components/LongPressTooltip';
+
+interface FormBuilderProps {
+  initialTemplate?: FormTemplate | null;
+}
+
+const getInitialFormState = (template?: FormTemplate | null) => {
+  const defaultSecId = `sec_${Date.now()}_1`;
+  return {
+    title: template ? `Copy of ${template.title}` : 'Untitled Offline Form',
+    description: template?.description || 'Digitize physical paper forms with zero backend dependency.',
+    settings: template?.settings || {
+      e2eeEnabled: false,
+      allowDraftRecovery: true,
+      showProgressBar: true,
+      shuffleQuestions: false,
+      confirmationMessage: 'Thank you! Your offline record has been saved securely.'
+    },
+    sections: template?.sections || [
+      {
+        id: defaultSecId,
+        title: 'Section 1',
+        description: '',
+        fields: [
+          {
+            id: `f_${Date.now()}_1`,
+            type: 'text',
+            label: 'Untitled Question',
+            placeholder: 'Enter response...',
+            required: false
+          }
+        ],
+        branchingRules: []
+      }
+    ],
+    activeSectionId: template?.sections[0]?.id || defaultSecId
+  };
+};
+
+export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => {
+  const initialState = getInitialFormState(initialTemplate);
+
+  const [title, setTitle] = useState(initialState.title);
+  const [description, setDescription] = useState(initialState.description);
+  const [settings, setSettings] = useState<FormTemplateSettings>(initialState.settings);
+  const [sections, setSections] = useState<FormSection[]>(initialState.sections);
+  const [activeSectionId, setActiveSectionId] = useState<string>(initialState.activeSectionId);
+
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const [openMenuFieldId, setOpenMenuFieldId] = useState<string | null>(null);
+  const [isPreview, setIsPreview] = useState(false);
+  const [previewSectionIndex, setPreviewSectionIndex] = useState(0);
+  const [previewFormData, setPreviewFormData] = useState<Record<string, any>>({});
+  const [isSectionReorderOpen, setIsSectionReorderOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Synchronize state whenever initialTemplate changes or when switching forms
+  useEffect(() => {
+    const freshState = getInitialFormState(initialTemplate);
+    setTitle(freshState.title);
+    setDescription(freshState.description);
+    setSettings(freshState.settings);
+    setSections(freshState.sections);
+    setActiveSectionId(freshState.activeSectionId);
+    setActiveFieldId(null);
+  }, [initialTemplate]);
+
+  const handleResetCanvas = () => {
+    const cleanState = getInitialFormState(null);
+    setTitle(cleanState.title);
+    setDescription(cleanState.description);
+    setSettings(cleanState.settings);
+    setSections(cleanState.sections);
+    setActiveSectionId(cleanState.activeSectionId);
+    setActiveFieldId(null);
+    setIsResetModalOpen(false);
+    setNotification('Builder canvas reset to clean template!');
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Drag and Drop state
+  const [draggedItem, setDraggedItem] = useState<{ sectionId: string; fieldId: string; fieldIndex: number } | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<{ sectionId: string; fieldId?: string; dropPosition?: 'before' | 'after' } | null>(null);
+
+  const optionInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const imageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const addSection = () => {
+    const newSecId = `sec_${Date.now()}_${sections.length + 1}`;
+    const newSec: FormSection = {
+      id: newSecId,
+      title: `Section ${sections.length + 1}`,
+      description: '',
+      fields: [],
+      branchingRules: []
+    };
+    setSections([...sections, newSec]);
+    setActiveSectionId(newSecId);
+    setActiveFieldId(null);
+  };
+
+  const removeSection = (secId: string) => {
+    if (sections.length <= 1) return;
+    const filtered = sections.filter((s) => s.id !== secId);
+    setSections(filtered);
+    if (activeSectionId === secId && filtered.length > 0) {
+      setActiveSectionId(filtered[0].id);
+    }
+  };
+
+  const moveSection = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= sections.length) return;
+    const updated = [...sections];
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+    setSections(updated);
+  };
+
+  const addFieldToActiveSection = (initialType: FieldType = 'text') => {
+    const targetSecId = activeSectionId || (sections.length > 0 ? sections[0].id : '');
+    if (!targetSecId) return;
+
+    const newId = `f_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const defaultOptions: FieldOption[] = ['radio', 'checkbox', 'select', 'multiselect'].includes(initialType)
+      ? [
+          { label: 'Option 1', value: 'Option 1', targetSectionId: 'NEXT' },
+          { label: 'Option 2', value: 'Option 2', targetSectionId: 'NEXT' }
+        ]
+      : [];
+
+    const newField: FormField = {
+      id: newId,
+      type: initialType,
+      label: initialType === 'title_block' ? 'Title' : 'Untitled Question',
+      description: initialType === 'title_block' ? 'Block description text' : '',
+      required: false,
+      options: defaultOptions,
+      validation: initialType === 'linear_scale' ? { required: false, min: 1, max: 5, minLabel: 'Low', maxLabel: 'High' } : { required: false }
+    };
+
+    setSections(
+      sections.map((s) => (s.id === targetSecId ? { ...s, fields: [...s.fields, newField] } : s))
+    );
+    setActiveFieldId(newId);
+  };
+
+  // Intra-section reorder via Arrow buttons
+  const moveQuestion = (secId: string, fieldIndex: number, direction: 'up' | 'down') => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        const targetIdx = direction === 'up' ? fieldIndex - 1 : fieldIndex + 1;
+        if (targetIdx < 0 || targetIdx >= s.fields.length) return s;
+        const updatedFields = [...s.fields];
+        const temp = updatedFields[fieldIndex];
+        updatedFields[fieldIndex] = updatedFields[targetIdx];
+        updatedFields[targetIdx] = temp;
+        return { ...s, fields: updatedFields };
+      })
+    );
+  };
+
+  const moveQuestionToSection = (srcSecId: string, targetSecId: string, fieldId: string) => {
+    if (srcSecId === targetSecId) return;
+    setSections((prevSections) => {
+      const srcSec = prevSections.find((s) => s.id === srcSecId);
+      if (!srcSec) return prevSections;
+      const fieldToMove = srcSec.fields.find((f) => f.id === fieldId);
+      if (!fieldToMove) return prevSections;
+
+      return prevSections.map((sec) => {
+        if (sec.id === srcSecId) {
+          return { ...sec, fields: sec.fields.filter((f) => f.id !== fieldId) };
+        }
+        if (sec.id === targetSecId) {
+          return { ...sec, fields: [...sec.fields, fieldToMove] };
+        }
+        return sec;
+      });
+    });
+    setActiveSectionId(targetSecId);
+  };
+
+  // Cross-Section HTML5 Drag and Drop & Touch Reorder handlers
+  const handleDragStart = (e: React.DragEvent, sectionId: string, fieldId: string, fieldIndex: number) => {
+    e.stopPropagation();
+    setDraggedItem({ sectionId, fieldId, fieldIndex });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', fieldId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, sectionId: string, targetFieldId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+
+    let dropPosition: 'before' | 'after' = 'before';
+    if (targetFieldId && e.currentTarget) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      if (e.clientY >= rect.top + rect.height / 2) {
+        dropPosition = 'after';
+      }
+    }
+    setDragOverTarget({ sectionId, fieldId: targetFieldId, dropPosition });
+  };
+
+  const executeReorder = (
+    srcSecId: string,
+    srcFieldId: string,
+    targetSecId: string,
+    targetFieldId?: string,
+    dropPosition: 'before' | 'after' = 'before'
+  ) => {
+    setSections((prevSections) => {
+      const srcSec = prevSections.find((s) => s.id === srcSecId);
+      if (!srcSec) return prevSections;
+      const fieldToMove = srcSec.fields.find((f) => f.id === srcFieldId);
+      if (!fieldToMove) return prevSections;
+
+      const updated = prevSections.map((sec) => {
+        if (sec.id === srcSecId) {
+          return { ...sec, fields: sec.fields.filter((f) => f.id !== srcFieldId) };
+        }
+        return sec;
+      });
+
+      return updated.map((sec) => {
+        if (sec.id === targetSecId) {
+          const newFields = [...sec.fields];
+          if (targetFieldId) {
+            const actualIndex = newFields.findIndex((f) => f.id === targetFieldId);
+            if (actualIndex !== -1) {
+              const insertIdx = dropPosition === 'after' ? actualIndex + 1 : actualIndex;
+              newFields.splice(insertIdx, 0, fieldToMove);
+            } else {
+              newFields.push(fieldToMove);
+            }
+          } else {
+            newFields.push(fieldToMove);
+          }
+          return { ...sec, fields: newFields };
+        }
+        return sec;
+      });
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent, targetSectionId: string, targetFieldId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedItem) return;
+    executeReorder(
+      draggedItem.sectionId,
+      draggedItem.fieldId,
+      targetSectionId,
+      targetFieldId,
+      dragOverTarget?.dropPosition || 'before'
+    );
+
+    setDraggedItem(null);
+    setDragOverTarget(null);
+  };
+
+  // Touch handlers for mobile touchscreen reordering
+  const handleTouchStart = (e: React.TouchEvent, sectionId: string, fieldId: string, fieldIndex: number) => {
+    e.stopPropagation();
+    try {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(40); // 40ms haptic feedback pulse
+      }
+    } catch (_) {}
+    setDraggedItem({ sectionId, fieldId, fieldIndex });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!draggedItem) return;
+    if (e.cancelable) {
+      e.preventDefault(); // Prevent browser page scrolling during mobile touch-drag
+    }
+    const touch = e.touches[0];
+
+    // Auto-scroll screen when touch dragging near top/bottom viewport edges
+    const viewportHeight = window.innerHeight;
+    if (touch.clientY > viewportHeight - 80) {
+      window.scrollBy({ top: 12, behavior: 'instant' });
+    } else if (touch.clientY < 80) {
+      window.scrollBy({ top: -12, behavior: 'instant' });
+    }
+
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    let found = false;
+
+    for (const element of elements) {
+      const cardEl = element.closest('[data-field-id]');
+      if (cardEl) {
+        const secId = cardEl.getAttribute('data-section-id');
+        const fId = cardEl.getAttribute('data-field-id');
+        if (secId && fId && fId !== draggedItem.fieldId) {
+          const rect = cardEl.getBoundingClientRect();
+          const isBottomHalf = touch.clientY >= rect.top + rect.height / 2;
+          setDragOverTarget({
+            sectionId: secId,
+            fieldId: fId,
+            dropPosition: isBottomHalf ? 'after' : 'before'
+          });
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      for (const element of elements) {
+        const secEl = element.closest('[data-section-id]');
+        if (secEl) {
+          const secId = secEl.getAttribute('data-section-id');
+          if (secId) {
+            setDragOverTarget({ sectionId: secId, dropPosition: 'after' });
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draggedItem && dragOverTarget) {
+      executeReorder(
+        draggedItem.sectionId,
+        draggedItem.fieldId,
+        dragOverTarget.sectionId,
+        dragOverTarget.fieldId,
+        dragOverTarget.dropPosition || 'before'
+      );
+    }
+    setDraggedItem(null);
+    setDragOverTarget(null);
+  };
+
+  const duplicateField = (secId: string, field: FormField) => {
+    const dupId = `f_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const duplicated: FormField = {
+      ...field,
+      id: dupId,
+      label: `${field.label} (Copy)`
+    };
+
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        const index = s.fields.findIndex((f) => f.id === field.id);
+        const updated = [...s.fields];
+        updated.splice(index + 1, 0, duplicated);
+        return { ...s, fields: updated };
+      })
+    );
+    setActiveFieldId(dupId);
+  };
+
+  const updateField = (secId: string, fieldId: string, updates: Partial<FormField>) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        return {
+          ...s,
+          fields: s.fields.map((f) => {
+            if (f.id !== fieldId) return f;
+            const updatedField = { ...f, ...updates };
+
+            if (
+              ['radio', 'checkbox', 'select', 'multiselect'].includes(updatedField.type) &&
+              (!updatedField.options || updatedField.options.length === 0)
+            ) {
+              updatedField.options = [
+                { label: 'Option 1', value: 'Option 1', targetSectionId: 'NEXT' },
+                { label: 'Option 2', value: 'Option 2', targetSectionId: 'NEXT' }
+              ];
+            }
+            return updatedField;
+          })
+        };
+      })
+    );
+  };
+
+  const removeField = (secId: string, fieldId: string) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        return { ...s, fields: s.fields.filter((f) => f.id !== fieldId) };
+      })
+    );
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, secId: string, fieldId: string) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const base64Url = uploadEvent.target?.result as string;
+        updateField(secId, fieldId, { imageUrl: base64Url });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addOption = (secId: string, fieldId: string) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        return {
+          ...s,
+          fields: s.fields.map((f) => {
+            if (f.id !== fieldId) return f;
+            const opts = f.options || [];
+            const nextNum = opts.length + 1;
+            const newOpt: FieldOption = {
+              label: `Option ${nextNum}`,
+              value: `Option ${nextNum}`,
+              targetSectionId: 'NEXT'
+            };
+            return { ...f, options: [...opts, newOpt] };
+          })
+        };
+      })
+    );
+  };
+
+  const updateOption = (secId: string, fieldId: string, optIdx: number, updates: Partial<FieldOption>) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        return {
+          ...s,
+          fields: s.fields.map((f) => {
+            if (f.id !== fieldId) return f;
+            const opts = [...(f.options || [])];
+            opts[optIdx] = { ...opts[optIdx], ...updates, value: updates.label !== undefined ? updates.label : opts[optIdx].value };
+            return { ...f, options: opts };
+          })
+        };
+      })
+    );
+  };
+
+  const removeOption = (secId: string, fieldId: string, optIdx: number) => {
+    setSections(
+      sections.map((s) => {
+        if (s.id !== secId) return s;
+        return {
+          ...s,
+          fields: s.fields.map((f) => {
+            if (f.id !== fieldId) return f;
+            const opts = [...(f.options || [])];
+            opts.splice(optIdx, 1);
+            return { ...f, options: opts };
+          })
+        };
+      })
+    );
+  };
+
+  // Bulk Paste Handler for Options
+  const handleOptionPaste = (e: React.ClipboardEvent<HTMLInputElement>, secId: string, fieldId: string, optIdx: number) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (pastedText.includes('\n')) {
+      e.preventDefault();
+      const lines = pastedText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+      if (lines.length === 0) return;
+
+      setSections(
+        sections.map((s) => {
+          if (s.id !== secId) return s;
+          return {
+            ...s,
+            fields: s.fields.map((f) => {
+              if (f.id !== fieldId) return f;
+              const currentOpts = [...(f.options || [])];
+              currentOpts[optIdx] = { label: lines[0], value: lines[0], targetSectionId: currentOpts[optIdx]?.targetSectionId || 'NEXT' };
+              for (let i = 1; i < lines.length; i++) {
+                currentOpts.splice(optIdx + i, 0, {
+                  label: lines[i],
+                  value: lines[i],
+                  targetSectionId: 'NEXT'
+                });
+              }
+              return { ...f, options: currentOpts };
+            })
+          };
+        })
+      );
+    }
+  };
+
+  // Enter Key Handler for Option Input
+  const handleOptionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, secId: string, fieldId: string, optIdx: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addOption(secId, fieldId);
+      setTimeout(() => {
+        const nextKey = `${fieldId}_${optIdx + 1}`;
+        if (optionInputRefs.current[nextKey]) {
+          optionInputRefs.current[nextKey]?.focus();
+        }
+      }, 50);
+    }
+  };
+
+  const [operatorProfile, setOperatorProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    db.userProfile.toArray().then((profiles) => {
+      if (profiles.length > 0) {
+        setOperatorProfile(profiles[0]);
+      }
+    });
+  }, []);
+
+  const handleSaveTemplate = async () => {
+    try {
+      const templateTitle = title.trim() || 'Untitled Form';
+      const templateData: Omit<FormTemplate, 'canonicalFingerprint'> = {
+        id: `tpl_${Date.now()}`,
+        title: templateTitle,
+        description,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        authorAlias: operatorProfile?.alias || 'Operator 1',
+        sections,
+        settings
+      };
+
+      const canonicalFingerprint = await generateTemplateFingerprint(templateData);
+      const fullTemplate: FormTemplate = {
+        ...templateData,
+        canonicalFingerprint
+      };
+
+      await db.templates.put(fullTemplate);
+      setIsSaveModalOpen(false);
+      setNotification(`Form template "${templateTitle}" locked & saved successfully!`);
+      setTimeout(() => setNotification(null), 5000);
+    } catch (err: any) {
+      console.error('Failed to save template:', err);
+      alert(`Error saving template: ${err?.message || 'IndexedDB storage write failed'}. Please verify mobile browser storage permissions.`);
+    }
+  };
+
+  const currentPreviewSection = sections[previewSectionIndex];
+
+  const handlePreviewNextSection = () => {
+    if (!currentPreviewSection) return;
+    const target = getNextSectionId(currentPreviewSection, sections, previewFormData);
+    if (target === 'SUBMIT') {
+      setNotification('Preview Completed! In real usage, your submission is stored in IndexedDB.');
+      setTimeout(() => setNotification(null), 5000);
+    } else {
+      const nextIdx = sections.findIndex((s) => s.id === target);
+      if (nextIdx !== -1) {
+        setPreviewSectionIndex(nextIdx);
+      }
+    }
+  };
+
+  return (
+    <div>
+      {notification && (
+        <div className="banner-notification">
+          <Hash size={18} color="var(--primary)" />
+          <span>{notification}</span>
+        </div>
+      )}
+
+      {/* Authoring Header Toolbar */}
+      <div className="builder-toolbar-container">
+        <div>
+          <h1 className="builder-toolbar-title">Form Builder Canvas</h1>
+          <p className="builder-toolbar-subtitle">
+            Author zero-backend forms aligned with 100% Google Forms features & section navigation.
+          </p>
+        </div>
+
+        <div className="builder-toolbar-actions">
+          <LongPressTooltip label="Reorder Sections">
+            <button className="btn btn-outline" onClick={() => setIsSectionReorderOpen(true)} title="Reorder Sections">
+              <Move size={18} />
+              <span>Reorder Sections</span>
+            </button>
+          </LongPressTooltip>
+
+          <LongPressTooltip label="Reset Canvas">
+            <button className="btn btn-outline" onClick={() => setIsResetModalOpen(true)} title="Clear canvas and start fresh">
+              <RotateCcw size={18} color="var(--accent-amber)" />
+              <span>Reset</span>
+            </button>
+          </LongPressTooltip>
+
+          <LongPressTooltip label="Form Settings">
+            <button className="btn btn-outline" onClick={() => setIsSettingsOpen(true)} title="Form Settings">
+              <Settings size={18} />
+              <span>Settings</span>
+            </button>
+          </LongPressTooltip>
+
+          <LongPressTooltip label={isPreview ? 'Back to Editor' : 'Preview Form'}>
+            <button className="btn btn-secondary" onClick={() => { setIsPreview(!isPreview); setPreviewSectionIndex(0); }}>
+              <Eye size={18} />
+              <span>{isPreview ? 'Back to Editor' : 'Preview Form'}</span>
+            </button>
+          </LongPressTooltip>
+
+          <LongPressTooltip label="Save Template">
+            <button className="btn btn-primary" onClick={() => setIsSaveModalOpen(true)}>
+              <Save size={18} />
+              <span>Save Template</span>
+            </button>
+          </LongPressTooltip>
+        </div>
+      </div>
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="drawer-header">
+              <h2 className="modal-title-heading">Form Settings</h2>
+              <button className="btn btn-outline btn-sm" onClick={() => setIsSettingsOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body-grid">
+              <label className="modal-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={settings.showProgressBar || false}
+                  onChange={(e) => setSettings({ ...settings, showProgressBar: e.target.checked })}
+                />
+                <span>Show progress bar during data entry</span>
+              </label>
+
+              <label className="modal-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={settings.shuffleQuestions || false}
+                  onChange={(e) => setSettings({ ...settings, shuffleQuestions: e.target.checked })}
+                />
+                <span>Shuffle question order within sections</span>
+              </label>
+
+              <label className="modal-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={settings.e2eeEnabled || false}
+                  onChange={(e) => setSettings({ ...settings, e2eeEnabled: e.target.checked })}
+                />
+                <span>Enable WebCrypto AES-GCM 256-bit E2EE Encryption</span>
+              </label>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Confirmation Message</label>
+                <textarea
+                  value={settings.confirmationMessage || ''}
+                  onChange={(e) => setSettings({ ...settings, confirmationMessage: e.target.value })}
+                  className="modal-textarea-full"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer-flex">
+              <button className="btn btn-primary" onClick={() => setIsSettingsOpen(false)}>
+                Close Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Behance-Style Section Reorder Drawer / Modal */}
+      {isSectionReorderOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="drawer-header">
+              <h2 className="modal-title-heading">Reorder Sections</h2>
+              <button className="btn btn-outline btn-sm" onClick={() => setIsSectionReorderOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Re-sequence entire sections of your form. Section numbers will update automatically.
+            </p>
+
+            <div className="modal-scroll-list">
+              {sections.map((sec, idx) => (
+                <div key={sec.id} className="modal-list-item-row">
+                  <div className="modal-item-info">
+                    <GripVertical size={18} color="var(--text-muted)" style={{ cursor: 'grab' }} />
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Section {idx + 1}: {sec.title}</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                        {sec.fields.length} question(s)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.3rem' }}>
+                    <button
+                      className="btn btn-outline"
+                      disabled={idx === 0}
+                      onClick={() => moveSection(idx, 'up')}
+                      style={{ padding: '0.3rem' }}
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      disabled={idx === sections.length - 1}
+                      onClick={() => moveSection(idx, 'down')}
+                      style={{ padding: '0.3rem' }}
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
+              <button className="btn btn-primary" onClick={() => setIsSectionReorderOpen(false)}>
+                Done Reordering
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section-by-Section Progression Preview Mode */}
+      {isPreview ? (
+        <div className="card">
+          {/* Header Card */}
+          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{title}</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>{description}</p>
+          </div>
+
+          {/* Section Progress Bar */}
+          {settings.showProgressBar && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                <span>Section {previewSectionIndex + 1} of {sections.length}</span>
+                <span>{Math.round(((previewSectionIndex + 1) / sections.length) * 100)}% Completed</span>
+              </div>
+              <div style={{ height: '6px', borderRadius: '3px', background: 'var(--bg-card-hover)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${((previewSectionIndex + 1) / sections.length) * 100}%`, background: 'var(--primary)', transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Single Section Progression View */}
+          {currentPreviewSection && (
+            <div key={currentPreviewSection.id} style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.4rem' }}>
+                {currentPreviewSection.title}
+              </h3>
+              {currentPreviewSection.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>{currentPreviewSection.description}</p>}
+
+              <div style={{ display: 'grid', gap: '1.25rem' }}>
+                {currentPreviewSection.fields.map((f) => (
+                  <div key={f.id} style={{ background: 'var(--bg-input)', padding: '1.25rem', borderRadius: 'var(--radius-sm)' }}>
+                    {f.type === 'title_block' ? (
+                      <div>
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{f.label}</h4>
+                        {f.description && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{f.description}</p>}
+                      </div>
+                    ) : (
+                      <>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>
+                          {f.label} {f.validation?.required && <span style={{ color: 'var(--accent-rose)' }}>*</span>}
+                        </label>
+                        {f.description && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>{f.description}</p>}
+
+                        {f.imageUrl && (
+                          <div style={{ marginBottom: '0.8rem' }}>
+                            <img src={f.imageUrl} alt={f.label} style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: 'var(--radius-sm)' }} />
+                          </div>
+                        )}
+
+                        {f.type === 'text' && <input type="text" placeholder={f.placeholder || 'Your answer'} style={{ width: '100%' }} />}
+                        {f.type === 'textarea' && <textarea placeholder={f.placeholder || 'Your answer'} style={{ width: '100%', minHeight: '80px' }} />}
+                        {f.type === 'number' && <input type="number" placeholder="0" style={{ width: '100%' }} />}
+                        {f.type === 'date' && <input type="date" style={{ width: '100%' }} />}
+                        {f.type === 'time' && <input type="time" style={{ width: '100%' }} />}
+                        {f.type === 'signature' && (
+                          <div style={{ border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <Edit3 size={24} style={{ marginBottom: '0.4rem' }} />
+                            <p style={{ fontSize: '0.85rem' }}>Digital Signature Pad (Interactive in Data Entry)</p>
+                          </div>
+                        )}
+                        {f.type === 'location' && (
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <MapPin size={20} color="var(--primary)" />
+                            <input type="text" placeholder="Enter Administrative Region / City..." style={{ width: '100%' }} />
+                          </div>
+                        )}
+
+                        {f.type === 'radio' && (
+                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                            {(f.options || []).map((opt, oIdx) => (
+                              <label key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name={`preview_${f.id}`}
+                                  value={opt.value}
+                                  onChange={(e) => setPreviewFormData({ ...previewFormData, [f.id]: e.target.value })}
+                                />
+                                <span>{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        {f.type === 'checkbox' && (
+                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                            {(f.options || []).map((opt, oIdx) => (
+                              <label key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input type="checkbox" value={opt.value} />
+                                <span>{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        {f.type === 'select' && (
+                          <select
+                            onChange={(e) => setPreviewFormData({ ...previewFormData, [f.id]: e.target.value })}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Choose an option...</option>
+                            {(f.options || []).map((opt, oIdx) => (
+                              <option key={oIdx} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Customizable Linear Scale (0 - 10 bounds) */}
+                        {f.type === 'linear_scale' && (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <div className="linear-scale-container" style={{ marginTop: '0.4rem' }}>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{f.validation?.minLabel || 'Low'}</span>
+                              {Array.from({ length: (f.validation?.max || 5) - (f.validation?.min ?? 1) + 1 }, (_, i) => (f.validation?.min ?? 1) + i).map((num) => (
+                                <label key={num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', cursor: 'pointer' }}>
+                                  <span>{num}</span>
+                                  <input type="radio" name={`scale_${f.id}`} value={num} />
+                                </label>
+                              ))}
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{f.validation?.maxLabel || 'High'}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {f.type === 'rating' && (
+                          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button key={star} style={{ background: 'transparent', padding: 0 }}>
+                                <Star size={24} color="var(--accent-amber)" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section Navigation Buttons */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+            <button
+              className="btn btn-secondary"
+              disabled={previewSectionIndex === 0}
+              onClick={() => setPreviewSectionIndex(previewSectionIndex - 1)}
+            >
+              Previous
+            </button>
+
+            <button className="btn btn-primary" onClick={handlePreviewNextSection}>
+              {previewSectionIndex === sections.length - 1 ? 'Submit' : 'Next Section'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="builder-layout-grid">
+          <div>
+            {/* Header Form Card */}
+            <div className="card" style={{ borderTop: '4px solid var(--primary)', position: 'relative' }}>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={{
+                  fontSize: '1.6rem',
+                  fontWeight: 700,
+                  width: '100%',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid var(--border-color)',
+                  borderRadius: 0,
+                  padding: '0.4rem 0',
+                  marginBottom: '0.75rem'
+                }}
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Form description"
+                style={{
+                  width: '100%',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  resize: 'none'
+                }}
+              />
+            </div>
+
+            {/* Sections list */}
+            {sections.map((sec, sIdx) => {
+              const isSecActive = activeSectionId === sec.id;
+              const isSectionDropTarget = dragOverTarget?.sectionId === sec.id && !dragOverTarget?.fieldId;
+
+              return (
+                <div
+                  key={sec.id}
+                  onClick={() => setActiveSectionId(sec.id)}
+                  onDragOver={(e) => handleDragOver(e, sec.id)}
+                  onDrop={(e) => handleDrop(e, sec.id)}
+                  className={`builder-section-container ${isSecActive ? 'active-section' : ''}`}
+                  style={{
+                    border: isSectionDropTarget ? '2px dashed var(--primary)' : undefined,
+                    padding: isSectionDropTarget ? '1rem' : undefined
+                  }}
+                >
+                  <div className="section-pill-badge">
+                    <Layers size={14} />
+                    <span>Section {sIdx + 1} of {sections.length}</span>
+                  </div>
+
+                  {/* Section Card Header */}
+                  <div
+                    className="card"
+                    style={{
+                      borderLeft: isSecActive ? '4px solid var(--accent-blue)' : '1px solid var(--border-color)',
+                      marginBottom: '1rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span className="badge badge-purple" style={{ whiteSpace: 'nowrap' }}>
+                        Section {sIdx + 1} of {sections.length}
+                      </span>
+
+                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                        <button
+                          className="btn btn-outline"
+                          disabled={sIdx === 0}
+                          onClick={(e) => { e.stopPropagation(); moveSection(sIdx, 'up'); }}
+                          title="Move Section Up"
+                          style={{ padding: '0.3rem' }}
+                        >
+                          <ArrowUp size={14} />
+                        </button>
+                        <button
+                          className="btn btn-outline"
+                          disabled={sIdx === sections.length - 1}
+                          onClick={(e) => { e.stopPropagation(); moveSection(sIdx, 'down'); }}
+                          title="Move Section Down"
+                          style={{ padding: '0.3rem' }}
+                        >
+                          <ArrowDown size={14} />
+                        </button>
+                        {sections.length > 1 && (
+                          <button
+                            className="btn btn-outline"
+                            onClick={(e) => { e.stopPropagation(); removeSection(sec.id); }}
+                            style={{ color: 'var(--accent-rose)', padding: '0.3rem' }}
+                            title="Delete Section"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={sec.title}
+                      onChange={(e) => {
+                        const updatedTitle = e.target.value;
+                        setSections(sections.map((s) => (s.id === sec.id ? { ...s, title: updatedTitle } : s)));
+                      }}
+                      placeholder="Section Title"
+                      style={{
+                        fontSize: '1.35rem',
+                        fontWeight: 700,
+                        width: '100%',
+                        minWidth: 0,
+                        boxSizing: 'border-box',
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: '1px solid var(--border-color)',
+                        borderRadius: 0,
+                        padding: '0.3rem 0',
+                        marginBottom: '0.6rem',
+                        color: 'var(--text-primary)'
+                      }}
+                    />
+
+                    <textarea
+                      value={sec.description || ''}
+                      onChange={(e) => {
+                        const updatedDesc = e.target.value;
+                        setSections(sections.map((s) => (s.id === sec.id ? { ...s, description: updatedDesc } : s)));
+                      }}
+                      placeholder="Description (optional)"
+                      rows={2}
+                      style={{
+                        width: '100%',
+                        minWidth: 0,
+                        boxSizing: 'border-box',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.9rem',
+                        resize: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Fields List */}
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {sec.fields.map((f, fIdx) => {
+                      const isActive = activeFieldId === f.id;
+                      const isOptionBased = ['radio', 'checkbox', 'select', 'multiselect'].includes(f.type);
+                      const supportsBranching = ['radio', 'select'].includes(f.type);
+                      const isCardDropTarget = dragOverTarget?.fieldId === f.id;
+
+                      // Unfocused Collapsed Question Card
+                      if (!isActive) {
+                        const isBeingDragged = draggedItem?.fieldId === f.id;
+                        return (
+                          <div
+                            key={f.id}
+                            data-section-id={sec.id}
+                            data-field-id={f.id}
+                            onDragOver={(e) => handleDragOver(e, sec.id, f.id)}
+                            onDrop={(e) => handleDrop(e, sec.id, f.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveSectionId(sec.id);
+                              setActiveFieldId(f.id);
+                            }}
+                            className="card"
+                            style={{
+                              padding: '1rem 1.25rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '0.5rem',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              background: isBeingDragged ? 'rgba(99, 102, 241, 0.18)' : 'var(--bg-card)',
+                              border: isBeingDragged ? '2px dashed var(--primary)' : '1px solid var(--border-color)',
+                              borderTop: isCardDropTarget ? '3px solid var(--primary)' : (isBeingDragged ? '2px dashed var(--primary)' : '1px solid var(--border-color)'),
+                              boxShadow: isBeingDragged ? '0 8px 24px rgba(99, 102, 241, 0.45)' : 'none',
+                              transform: isBeingDragged ? 'scale(1.02)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                              <div
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, sec.id, f.id, fIdx)}
+                                onTouchStart={(e) => handleTouchStart(e, sec.id, f.id, fIdx)}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ cursor: 'grab', padding: '0.4rem', touchAction: 'none' }}
+                                title="Drag or touch-drag to reorder"
+                              >
+                                <GripVertical size={18} color={isBeingDragged ? 'var(--primary)' : 'var(--text-muted)'} />
+                              </div>
+                              <div>
+                                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                                  {f.label} {f.validation?.required && <span style={{ color: 'var(--accent-rose)' }}>*</span>}
+                                </span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.75rem' }}>
+                                  ({f.type})
+                                </span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <button
+                                className="btn btn-outline"
+                                disabled={fIdx === 0}
+                                onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'up'); }}
+                                title="Move Up within Section"
+                                style={{ padding: '0.2rem 0.4rem' }}
+                              >
+                                <ArrowUp size={14} />
+                              </button>
+                              <button
+                                className="btn btn-outline"
+                                disabled={fIdx === sec.fields.length - 1}
+                                onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'down'); }}
+                                title="Move Down within Section"
+                                style={{ padding: '0.2rem 0.4rem' }}
+                              >
+                                <ArrowDown size={14} />
+                              </button>
+                              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>Click to Edit</span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Active Expanded Question Card Authoring View
+                      return (
+                        <div
+                          key={f.id}
+                          onDragOver={(e) => handleDragOver(e, sec.id, f.id)}
+                          onDrop={(e) => handleDrop(e, sec.id, f.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSectionId(sec.id);
+                            setActiveFieldId(f.id);
+                          }}
+                          className="card"
+                          data-section-id={sec.id}
+                          data-field-id={f.id}
+                          style={{
+                            borderLeft: '4px solid var(--primary)',
+                            borderTop: isCardDropTarget ? '3px solid var(--primary)' : '1px solid var(--border-color)',
+                            padding: '1.25rem',
+                            position: 'relative'
+                          }}
+                        >
+                          {/* Drag Handle Dots & Reorder controls */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                            <div style={{ display: 'flex', gap: '0.2rem' }}>
+                              <button
+                                className="btn btn-outline"
+                                disabled={fIdx === 0}
+                                onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'up'); }}
+                                title="Move Question Up"
+                                style={{ padding: '0.2rem 0.4rem' }}
+                              >
+                                <ArrowUp size={14} />
+                              </button>
+                              <button
+                                className="btn btn-outline"
+                                disabled={fIdx === sec.fields.length - 1}
+                                onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'down'); }}
+                                title="Move Question Down"
+                                style={{ padding: '0.2rem 0.4rem' }}
+                              >
+                                <ArrowDown size={14} />
+                              </button>
+
+                              {sections.length > 1 && (
+                                <select
+                                  value={sec.id}
+                                  onChange={(e) => { e.stopPropagation(); moveQuestionToSection(sec.id, e.target.value, f.id); }}
+                                  style={{ fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: 'var(--radius-sm)' }}
+                                  title="Move question to another section"
+                                >
+                                  {sections.map((s, sIdx) => (
+                                    <option key={s.id} value={s.id}>
+                                      Sec {sIdx + 1}: {s.title || 'Untitled'}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+
+                            <div
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, sec.id, f.id, fIdx)}
+                              onTouchStart={(e) => handleTouchStart(e, sec.id, f.id, fIdx)}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                              style={{ cursor: 'grab', padding: '0.4rem', touchAction: 'none' }}
+                              title="Drag or touch-drag to reorder"
+                            >
+                              <GripVertical size={20} style={{ transform: 'rotate(90deg)', color: 'var(--primary)' }} />
+                            </div>
+
+                            <div />
+                          </div>
+
+                          {/* Question Title & Type Selector */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+                            {/* Row 1: Dedicated Full-Width Question Title Input */}
+                            <input
+                              type="text"
+                              value={f.label}
+                              onChange={(e) => updateField(sec.id, f.id, { label: e.target.value })}
+                              placeholder={f.type === 'title_block' ? 'Title Block Header' : 'Question Label'}
+                              style={{
+                                fontWeight: 600,
+                                fontSize: '1.05rem',
+                                width: '100%',
+                                minWidth: 0,
+                                boxSizing: 'border-box',
+                                padding: '0.6rem 0.8rem'
+                              }}
+                            />
+
+                            {/* Row 2: Image Attach Button + Question Type Selector */}
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                ref={(el) => { imageInputRefs.current[f.id] = el; }}
+                                onChange={(e) => handleImageUpload(e, sec.id, f.id)}
+                                style={{ display: 'none' }}
+                              />
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => imageInputRefs.current[f.id]?.click()}
+                                title="Attach Image to Question"
+                                style={{ padding: '0.5rem 0.75rem' }}
+                              >
+                                <Image size={18} color="var(--primary)" />
+                              </button>
+
+                              <select
+                                value={f.type}
+                                onChange={(e) => updateField(sec.id, f.id, { type: e.target.value as FieldType })}
+                                style={{ flex: 1, minWidth: 0 }}
+                              >
+                                <option value="text">Short answer</option>
+                                <option value="textarea">Paragraph</option>
+                                <option value="radio">Multiple choice</option>
+                                <option value="checkbox">Checkboxes</option>
+                                <option value="select">Dropdown</option>
+                                <option value="linear_scale">Linear scale (Custom)</option>
+                                <option value="rating">Rating (Star)</option>
+                                <option value="number">Number</option>
+                                <option value="date">Date</option>
+                                <option value="time">Time</option>
+                                <option value="signature">Digital Signature</option>
+                                <option value="location">Privacy Location (Region)</option>
+                                <option value="title_block">Title & Description Block</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Image Preview inside Question Card */}
+                          {f.imageUrl && (
+                            <div style={{ position: 'relative', marginBottom: '1rem', display: 'inline-block' }}>
+                              <img src={f.imageUrl} alt="Attached" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius-sm)' }} />
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => updateField(sec.id, f.id, { imageUrl: undefined })}
+                                style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '0.2rem 0.4rem' }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Customizable Linear Scale Configuration Panel */}
+                          {f.type === 'linear_scale' && (
+                            <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem' }}>
+                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                <label style={{ fontSize: '0.85rem' }}>Min Bound:</label>
+                                <select
+                                  value={f.validation?.min ?? 1}
+                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, min: Number(e.target.value) } })}
+                                >
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                </select>
+
+                                <label style={{ fontSize: '0.85rem' }}>Max Bound:</label>
+                                <select
+                                  value={f.validation?.max ?? 5}
+                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, max: Number(e.target.value) } })}
+                                >
+                                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                    <option key={n} value={n}>{n}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <input
+                                  type="text"
+                                  value={f.validation?.minLabel || ''}
+                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, minLabel: e.target.value } })}
+                                  placeholder="Low bound label (e.g. Disagree)"
+                                  style={{ fontSize: '0.85rem' }}
+                                />
+                                <input
+                                  type="text"
+                                  value={f.validation?.maxLabel || ''}
+                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxLabel: e.target.value } })}
+                                  placeholder="High bound label (e.g. Agree)"
+                                  style={{ fontSize: '0.85rem' }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Description Input (if enabled) */}
+                          {(f.showDescription || f.type === 'title_block') && (
+                            <div style={{ marginBottom: '1rem' }}>
+                              <input
+                                type="text"
+                                value={f.description || ''}
+                                onChange={(e) => updateField(sec.id, f.id, { description: e.target.value })}
+                                placeholder="Description"
+                                style={{ width: '100%', fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+                              />
+                            </div>
+                          )}
+
+                          {/* Smart Options Authoring (Bulk Paste & Enter Key Creation) */}
+                          {isOptionBased && (
+                            <div style={{ marginBottom: '1.25rem', display: 'grid', gap: '0.6rem', paddingLeft: '0.5rem' }}>
+                              {(f.options || []).map((opt, oIdx) => (
+                                <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                  {f.type === 'radio' && <Circle size={16} color="var(--text-muted)" />}
+                                  {f.type === 'checkbox' && <CheckSquare size={16} color="var(--text-muted)" />}
+                                  {f.type === 'select' && <List size={16} color="var(--text-muted)" />}
+
+                                  <input
+                                    ref={(el) => { optionInputRefs.current[`${f.id}_${oIdx}`] = el; }}
+                                    type="text"
+                                    value={opt.label}
+                                    onChange={(e) => updateOption(sec.id, f.id, oIdx, { label: e.target.value })}
+                                    onPaste={(e) => handleOptionPaste(e, sec.id, f.id, oIdx)}
+                                    onKeyDown={(e) => handleOptionKeyDown(e, sec.id, f.id, oIdx)}
+                                    placeholder={`Option ${oIdx + 1} (Paste multiline list or press Enter for next)`}
+                                    style={{ flex: 1, fontSize: '0.9rem', padding: '0.4rem 0.6rem' }}
+                                  />
+
+                                  {/* Option-Based Branching Dropdown ("Go to section based on answer") */}
+                                  {f.showSectionBranching && supportsBranching && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      <ArrowUpRight size={14} color="var(--primary)" />
+                                      <select
+                                        value={opt.targetSectionId || 'NEXT'}
+                                        onChange={(e) => updateOption(sec.id, f.id, oIdx, { targetSectionId: e.target.value })}
+                                        style={{ fontSize: '0.8rem', padding: '0.3rem' }}
+                                      >
+                                        <option value="NEXT">Continue to next section</option>
+                                        {sections.map((targetSec, tsIdx) => (
+                                          <option key={targetSec.id} value={targetSec.id}>
+                                            Go to section {tsIdx + 1} ({targetSec.title})
+                                          </option>
+                                        ))}
+                                        <option value="SUBMIT">Submit form</option>
+                                      </select>
+                                    </div>
+                                  )}
+
+                                  {(f.options || []).length > 1 && (
+                                    <button
+                                      className="btn btn-outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeOption(sec.id, f.id, oIdx);
+                                      }}
+                                      style={{ padding: '0.2rem 0.4rem' }}
+                                    >
+                                      <X size={14} color="var(--text-muted)" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+
+                              <div style={{ marginTop: '0.4rem' }}>
+                                <button
+                                  className="btn btn-outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addOption(sec.id, f.id);
+                                  }}
+                                  style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                >
+                                  <Plus size={14} />
+                                  <span>Add option</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bottom Card Action Toolbar */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                className="btn btn-outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  duplicateField(sec.id, f);
+                                }}
+                                title="Duplicate Question"
+                                style={{ padding: '0.4rem' }}
+                              >
+                                <Copy size={16} />
+                              </button>
+
+                              <button
+                                className="btn btn-outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeField(sec.id, f.id);
+                                }}
+                                title="Delete Question"
+                                style={{ padding: '0.4rem', color: 'var(--accent-rose)' }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              {f.type !== 'title_block' && (
+                                <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={f.required || f.validation?.required || false}
+                                    onChange={(e) => updateField(sec.id, f.id, { required: e.target.checked, validation: { ...f.validation, required: e.target.checked } })}
+                                  />
+                                  Required
+                                </label>
+                              )}
+
+                              {/* 3-Dots Context Menu Dropdown */}
+                              <div style={{ position: 'relative' }}>
+                                <button
+                                  className="btn btn-outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuFieldId(openMenuFieldId === f.id ? null : f.id);
+                                  }}
+                                  style={{ padding: '0.4rem' }}
+                                >
+                                  <MoreVertical size={16} />
+                                </button>
+
+                                {openMenuFieldId === f.id && (
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      right: 0,
+                                      bottom: '2.5rem',
+                                      background: 'var(--bg-card)',
+                                      border: '1px solid var(--border-color)',
+                                      borderRadius: 'var(--radius-sm)',
+                                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                                      zIndex: 10,
+                                      width: '220px',
+                                      padding: '0.4rem'
+                                    }}
+                                  >
+                                    <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', cursor: 'pointer' }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={f.showDescription || false}
+                                        onChange={(e) => {
+                                          updateField(sec.id, f.id, { showDescription: e.target.checked });
+                                          setOpenMenuFieldId(null);
+                                        }}
+                                      />
+                                      <span>Show Description</span>
+                                    </label>
+
+                                    {supportsBranching && (
+                                      <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', cursor: 'pointer' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={f.showSectionBranching || false}
+                                          onChange={(e) => {
+                                            updateField(sec.id, f.id, { showSectionBranching: e.target.checked });
+                                            setOpenMenuFieldId(null);
+                                          }}
+                                        />
+                                        <span>Go to section based on answer</span>
+                                      </label>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Section Bottom Drop Zone (To drop items at the very end) */}
+                  <div
+                    data-section-id={sec.id}
+                    onDragOver={(e) => handleDragOver(e, sec.id, undefined)}
+                    onDrop={(e) => handleDrop(e, sec.id, undefined)}
+                    style={{
+                      marginTop: '0.75rem',
+                      padding: dragOverTarget?.sectionId === sec.id && !dragOverTarget?.fieldId ? '0.75rem' : '0.25rem',
+                      border: dragOverTarget?.sectionId === sec.id && !dragOverTarget?.fieldId ? '2px dashed var(--primary)' : '1px dashed transparent',
+                      borderRadius: 'var(--radius-md)',
+                      background: dragOverTarget?.sectionId === sec.id && !dragOverTarget?.fieldId ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                      textAlign: 'center',
+                      fontSize: '0.8rem',
+                      color: 'var(--primary)',
+                      fontWeight: 600,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {dragOverTarget?.sectionId === sec.id && !dragOverTarget?.fieldId ? 'Drop here to move to end of section' : ''}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Sticky Right Action Palette (Google Forms Style) */}
+          <div
+            className="builder-action-palette"
+            style={{
+              position: 'sticky',
+              top: '5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            }}
+          >
+            <LongPressTooltip label="Add Question">
+              <button
+                className="btn btn-outline"
+                onClick={() => addFieldToActiveSection('text')}
+                title="Add Question to Active Section"
+                style={{ padding: '0.6rem' }}
+              >
+                <Plus size={20} color="var(--primary)" />
+              </button>
+            </LongPressTooltip>
+
+            <LongPressTooltip label="Add Title Block">
+              <button
+                className="btn btn-outline"
+                onClick={() => addFieldToActiveSection('title_block')}
+                title="Add Title & Description Block"
+                style={{ padding: '0.6rem' }}
+              >
+                <Type size={20} color="var(--accent-amber)" />
+              </button>
+            </LongPressTooltip>
+
+            <LongPressTooltip label="Add Section Break">
+              <button
+                className="btn btn-outline"
+                onClick={addSection}
+                title="Add Section Break"
+                style={{ padding: '0.6rem' }}
+              >
+                <Layers size={20} color="var(--accent-blue)" />
+              </button>
+            </LongPressTooltip>
+          </div>
+        </div>
+      )}
+
+      {/* Save Template Lock Confirmation Modal */}
+      <SaveTemplateModal
+        isOpen={isSaveModalOpen}
+        templateTitle={title}
+        onConfirm={handleSaveTemplate}
+        onCancel={() => setIsSaveModalOpen(false)}
+      />
+
+      {/* Canvas Reset Safety Confirmation Modal */}
+      <ResetCanvasModal
+        isOpen={isResetModalOpen}
+        onConfirm={handleResetCanvas}
+        onCancel={() => setIsResetModalOpen(false)}
+      />
+    </div>
+  );
+};

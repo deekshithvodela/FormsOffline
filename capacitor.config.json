@@ -1,0 +1,9 @@
+{
+  "appId": "com.deekshithvodela.formsoffline",
+  "appName": "Forms Offline",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
