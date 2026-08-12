@@ -14,16 +14,22 @@ const HelpTab = lazy(() => import('./ui/help/HelpTab').then(m => ({ default: m.H
 
 type TabType = 'dashboard' | 'builder' | 'entry' | 'cms' | 'import' | 'help';
 
+const getBasePath = (): string => {
+  const b = import.meta.env.BASE_URL || '/';
+  return b.replace(/\/+$/, '');
+};
+
 const tabToPath = (tab: TabType): string => {
+  const base = getBasePath();
   switch (tab) {
-    case 'builder': return '/builder';
-    case 'entry': return '/entry';
-    case 'cms': return '/cms';
-    case 'import': return '/consolidate';
-    case 'help': return '/help';
+    case 'builder': return `${base}/builder`;
+    case 'entry': return `${base}/entry`;
+    case 'cms': return `${base}/cms`;
+    case 'import': return `${base}/consolidate`;
+    case 'help': return `${base}/help`;
     case 'dashboard':
     default:
-      return '/dashboard';
+      return `${base}/dashboard`;
   }
 };
 

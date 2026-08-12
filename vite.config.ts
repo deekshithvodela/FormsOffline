@@ -32,7 +32,7 @@ export default defineConfig({
       }
     })
   ],
-  base: './',
+  base: process.env.GITHUB_ACTIONS ? '/FormsOffline/' : './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

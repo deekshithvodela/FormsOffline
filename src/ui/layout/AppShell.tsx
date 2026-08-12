@@ -170,7 +170,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
           • 100% Offline & Privacy-First • MIT License
         </div>
         <div className="footer-meta-right">
-          <span className="badge badge-purple">v1.0.0</span>
+          <span className="badge badge-purple">v1.1.0</span>
           <span>IndexedDB Local Storage</span>
         </div>
       </footer>
@@ -222,7 +222,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
 
             <div className="drawer-footer">
               <div className="storage-metrics-pill">
-                <strong>Forms Offline v1.0.0</strong> • Zero Backend PWA
+                <strong>Forms Offline v1.1.0</strong> • Zero Backend PWA
               </div>
             </div>
           </div>

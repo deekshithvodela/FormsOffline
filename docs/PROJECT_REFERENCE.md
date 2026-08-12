@@ -1,7 +1,7 @@
 # Forms Offline — Project Technical Reference Index
 
 > **Auto-Generated File**: Do not edit manually. Updated automatically via `npm run build:reference`.
-> Last generated: 2026-08-12T18:26:45.405Z
+> Last generated: 2026-08-12T18:36:03.241Z
 
 ## ⚠️ CRITICAL GIT BRANCHING & RELEASE SAFEGUARD DIRECTIVE
 
@@ -14,7 +14,7 @@
 
 | Relative File Path | Total Lines | Exports Count | Types/Interfaces |
 | :--- | :---: | :---: | :---: |
-| `src/App.tsx` | 106 | 1 | 0 |
+| `src/App.tsx` | 112 | 1 | 0 |
 | `src/core/branching/evaluator.ts` | 93 | 2 | 0 |
 | `src/core/crypto/e2ee.ts` | 84 | 0 | 0 |
 | `src/core/fingerprint/canonicalJson.ts` | 26 | 1 | 0 |
@@ -80,7 +80,7 @@
 ## 3. Exported APIs, Components & Utilities
 
 ### `src/App.tsx`
-- **const** `App` (Line 47) — `export const App: React.FC = () => {`
+- **const** `App` (Line 53) — `export const App: React.FC = () => {`
 
 ### `src/core/branching/evaluator.ts`
 - **function** `evaluateCondition` (Line 9) — `export function evaluateCondition(`
