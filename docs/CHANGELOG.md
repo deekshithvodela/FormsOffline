@@ -5,6 +5,17 @@ All notable changes to **Forms Offline** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-12
+
+### Added
+- **CMS File Attachment Editing**: Inline file upload, attachment badge preview, removal, and replacement support in `EditSubmissionModal`.
+- **ZIP Package Ingestion in Data Consolidator**: Support for ingesting `.zip` export archives alongside `.formdata` JSON packages in `DataConsolidator`.
+- **Consolidation Strategy Guide**: Comprehensive documentation added to `USER_MANUAL.md` and in-app `HelpTab` recommending `.formdata` for forms without files and `.zip` packages for forms with attached media/files.
+
+### Fixed
+- **Rapid Entry Post-Submission Draft Persistence**: Immediately clear pending `autosaveTimerRef` upon final submission to prevent background autosave timers from recreating draft records post-submission.
+- **Form Data Text Editor Line Length**: Formatted `.formdata` JSON export with multi-line indents (`JSON.stringify(pkg, null, 2)`), preventing 260,000+ single-line editor truncation warnings when inspecting attached Base64 files.
+
 ---
 
 ## [1.0.0] - 2026-08-11

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, ArrowRight, ArrowLeft, CheckCircle, Clock, AlertTriangle, Star, MapPin, Trash2, Folder, Database, FileText } from 'lucide-react';
-import { FormSubmission, FormTemplate, UserProfile } from '../../core/types';
+import { Save, ArrowRight, ArrowLeft, CheckCircle, Clock, AlertTriangle, Star, MapPin, Trash2, Folder, Database, FileText, Upload } from 'lucide-react';
+import { FormSubmission, FormTemplate, UserProfile, FormField, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { getNextSectionId } from '../../core/branching/evaluator';
 import { createProvenanceEntry } from '../../core/merge/mergeEngine';
@@ -52,6 +52,19 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
       resetForm();
     }
   }, [activeTemplate]);
+
+  // Load existing draft for selected template if present
+  useEffect(() => {
+    if (selectedTemplate) {
+      const draftId = `sub_${selectedTemplate.id}_draft`;
+      db.submissions.get(draftId).then((existingDraft) => {
+        if (existingDraft && existingDraft.data && Object.keys(existingDraft.data).length > 0 && !isCompleted) {
+          setFormData(existingDraft.data);
+          setSaveStatus('saved');
+        }
+      });
+    }
+  }, [selectedTemplate]);
 
   // 300ms Debounced Autosave & beforeunload listener
   useEffect(() => {
@@ -167,8 +180,86 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
     handleInputChange(fieldId, null);
   };
 
+  const getAcceptString = (allowedTypes?: AllowedFileType[]): string | undefined => {
+    if (!allowedTypes || allowedTypes.length === 0) return undefined;
+    const mimeMap: Record<AllowedFileType, string> = {
+      document: '.doc,.docx,.txt,.rtf,.pdf',
+      spreadsheet: '.xls,.xlsx,.csv',
+      presentation: '.ppt,.pptx',
+      drawing: 'image/*',
+      image: 'image/*',
+      pdf: '.pdf',
+      audio: 'audio/*',
+      video: 'video/*',
+      archive: '.zip,.rar,.7z,.tar,.gz'
+    };
+    return allowedTypes.map((t) => mimeMap[t]).join(',');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: FormField) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxSizeBytes = (field.validation?.maxFileSizeMB || 10) * 1024 * 1024;
+    const maxCount = field.validation?.maxFileCount || 1;
+
+    const currentUploaded = Array.isArray(formData[field.id])
+      ? formData[field.id]
+      : formData[field.id]
+      ? [formData[field.id]]
+      : [];
+
+    const newFilePromises: Promise<any>[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (file.size > maxSizeBytes) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          [field.id]: `File "${file.name}" exceeds maximum allowed size of ${field.validation?.maxFileSizeMB || 10} MB.`
+        }));
+        return;
+      }
+
+      newFilePromises.push(
+        new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            resolve({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: evt.target?.result as string
+            });
+          };
+          reader.readAsDataURL(file);
+        })
+      );
+    }
+
+    Promise.all(newFilePromises).then((uploadedObjects) => {
+      let combined = [...currentUploaded, ...uploadedObjects];
+      if (combined.length > maxCount) {
+        combined = combined.slice(0, maxCount);
+      }
+      handleInputChange(field.id, maxCount === 1 ? combined[0] : combined);
+    });
+  };
+
+  const removeUploadedFile = (fieldId: string, indexToRemove: number) => {
+    const current = formData[fieldId];
+    if (Array.isArray(current)) {
+      const updated = current.filter((_, idx) => idx !== indexToRemove);
+      handleInputChange(fieldId, updated.length > 0 ? updated : null);
+    } else {
+      handleInputChange(fieldId, null);
+    }
+  };
+
   const saveDraft = async () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || isCompleted) return;
+    if (Object.keys(formData).length === 0) return;
     setSaveStatus('saving');
 
     try {
@@ -273,6 +364,13 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
 
   const handleSubmitFinal = async () => {
     if (!selectedTemplate) return;
+
+    // Immediately cancel pending autosave timer to prevent draft re-creation post submission
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
     setSaveStatus('saving');
 
     try {
@@ -312,6 +410,10 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
   };
 
   const resetForm = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
     setFormData({});
     setActiveSectionIndex(0);
     setIsCompleted(false);
@@ -669,6 +771,69 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                                 <Trash2 size={14} /> Clear
                               </button>
                             </div>
+                          </div>
+                        )}
+
+                        {/* File Upload Response Widget */}
+                        {f.type === 'file_upload' && (
+                          <div>
+                            <input
+                              type="file"
+                              multiple={(f.validation?.maxFileCount || 1) > 1}
+                              accept={getAcceptString(f.validation?.allowedFileTypes)}
+                              onChange={(e) => handleFileUpload(e, f)}
+                              style={{ display: 'none' }}
+                              id={`file_input_${f.id}`}
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                              <label
+                                htmlFor={`file_input_${f.id}`}
+                                className="btn btn-outline"
+                                style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 1rem' }}
+                              >
+                                <Upload size={18} color="var(--primary)" />
+                                <span>Add File(s)</span>
+                              </label>
+
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                Max {f.validation?.maxFileSizeMB || 10} MB per file (Max {f.validation?.maxFileCount || 1} file(s))
+                              </span>
+                            </div>
+
+                            {/* Uploaded Files Badges */}
+                            {formData[f.id] && (
+                              <div style={{ marginTop: '0.8rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                                {(Array.isArray(formData[f.id]) ? formData[f.id] : [formData[f.id]]).map((fileObj: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.5rem',
+                                      background: 'var(--bg-card)',
+                                      border: '1px solid var(--border-color)',
+                                      padding: '0.45rem 0.75rem',
+                                      borderRadius: 'var(--radius-sm)',
+                                      fontSize: '0.85rem'
+                                    }}
+                                  >
+                                    <FileText size={16} color="var(--primary)" />
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fileObj.name || `File ${idx + 1}`}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                      {fileObj.size ? `(${(fileObj.size / (1024 * 1024)).toFixed(2)} MB)` : ''}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeUploadedFile(f.id, idx)}
+                                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-rose)', padding: '0.2rem', marginLeft: '0.2rem' }}
+                                      title="Remove file"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit3, MapPin, Star } from 'lucide-react';
-import { FormSubmission, FormTemplate } from '../../core/types';
+import { X, Save, Edit3, MapPin, Star, Upload, Trash2, FileText } from 'lucide-react';
+import { FormSubmission, FormTemplate, FormField, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { createProvenanceEntry } from '../../core/merge/mergeEngine';
 
@@ -101,6 +101,80 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     handleInputChange(fieldId, null);
+  };
+
+  const getAcceptString = (allowedTypes?: AllowedFileType[]): string | undefined => {
+    if (!allowedTypes || allowedTypes.length === 0) return undefined;
+    const mimeMap: Record<AllowedFileType, string> = {
+      document: '.doc,.docx,.txt,.rtf,.pdf',
+      spreadsheet: '.xls,.xlsx,.csv',
+      presentation: '.ppt,.pptx',
+      drawing: 'image/*',
+      image: 'image/*',
+      pdf: '.pdf',
+      audio: 'audio/*',
+      video: 'video/*',
+      archive: '.zip,.rar,.7z,.tar,.gz'
+    };
+    return allowedTypes.map((t) => mimeMap[t]).join(',');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: FormField) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxSizeBytes = (field.validation?.maxFileSizeMB || 10) * 1024 * 1024;
+    const maxCount = field.validation?.maxFileCount || 1;
+
+    const currentUploaded = Array.isArray(formData[field.id])
+      ? formData[field.id]
+      : formData[field.id]
+      ? [formData[field.id]]
+      : [];
+
+    const newFilePromises: Promise<any>[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (file.size > maxSizeBytes) {
+        setErrorMsg(`File "${file.name}" exceeds maximum allowed size of ${field.validation?.maxFileSizeMB || 10} MB.`);
+        return;
+      }
+
+      newFilePromises.push(
+        new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            resolve({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: evt.target?.result as string
+            });
+          };
+          reader.readAsDataURL(file);
+        })
+      );
+    }
+
+    Promise.all(newFilePromises).then((uploadedObjects) => {
+      let combined = [...currentUploaded, ...uploadedObjects];
+      if (combined.length > maxCount) {
+        combined = combined.slice(0, maxCount);
+      }
+      handleInputChange(field.id, maxCount === 1 ? combined[0] : combined);
+    });
+  };
+
+  const removeUploadedFile = (fieldId: string, indexToRemove: number) => {
+    const current = formData[fieldId];
+    if (Array.isArray(current)) {
+      const updated = current.filter((_, idx) => idx !== indexToRemove);
+      handleInputChange(fieldId, updated.length > 0 ? updated : null);
+    } else {
+      handleInputChange(fieldId, null);
+    }
   };
 
   const handleSaveChanges = async () => {
@@ -383,6 +457,96 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
                       </button>
                     );
                   })}
+                </div>
+              )}
+
+              {f.type === 'file_upload' && (
+                <div>
+                  {/* Current Uploaded Files */}
+                  {(() => {
+                    const currentFiles = Array.isArray(formData[f.id])
+                      ? formData[f.id]
+                      : formData[f.id]
+                      ? [formData[f.id]]
+                      : [];
+
+                    return (
+                      <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        {currentFiles.map((fileObj: any, idx: number) => {
+                          const fileName = typeof fileObj === 'object' && fileObj?.name ? fileObj.name : `Attached File ${idx + 1}`;
+                          const fileSizeStr = typeof fileObj === 'object' && fileObj?.size ? `${(fileObj.size / 1024).toFixed(1)} KB` : '';
+                          const fileData = typeof fileObj === 'object' && fileObj?.data ? fileObj.data : (typeof fileObj === 'string' ? fileObj : '#');
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'var(--bg-card)',
+                                border: '1px solid var(--border-color)',
+                                padding: '0.4rem 0.75rem',
+                                borderRadius: 'var(--radius-sm)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', flex: 1 }}>
+                                <FileText size={16} color="var(--primary)" />
+                                <a
+                                  href={fileData}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={fileName}
+                                  style={{
+                                    fontSize: '0.85rem',
+                                    color: 'var(--primary)',
+                                    fontWeight: 500,
+                                    textOverflow: 'ellipsis',
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {fileName}
+                                </a>
+                                {fileSizeStr && (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({fileSizeStr})</span>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={() => removeUploadedFile(f.id, idx)}
+                                style={{ padding: '0.2rem 0.4rem', color: 'var(--accent-rose)', border: 'none' }}
+                                title="Remove File"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Upload New File Button */}
+                  <label
+                    className="btn btn-outline btn-sm"
+                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Upload size={14} color="var(--primary)" />
+                    <span>Upload / Add File</span>
+                    <input
+                      type="file"
+                      accept={getAcceptString(f.validation?.allowedFileTypes)}
+                      multiple={(f.validation?.maxFileCount || 1) > 1}
+                      onChange={(e) => handleFileUpload(e, f)}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.75rem' }}>
+                    Max size: {f.validation?.maxFileSizeMB || 10} MB (Max files: {f.validation?.maxFileCount || 1})
+                  </span>
                 </div>
               )}
             </div>

@@ -1,7 +1,14 @@
 # Forms Offline — Project Technical Reference Index
 
 > **Auto-Generated File**: Do not edit manually. Updated automatically via `npm run build:reference`.
-> Last generated: 2026-08-12T14:16:37.054Z
+> Last generated: 2026-08-12T18:26:45.405Z
+
+## ⚠️ CRITICAL GIT BRANCHING & RELEASE SAFEGUARD DIRECTIVE
+
+1. **`antigravity-dev` is SACRED**: All micro-commits on `antigravity-dev` represent detailed local development history. **NEVER squash, reset, rebase, or mutate history on `antigravity-dev`**.
+2. **NEVER PUSH `antigravity-dev` TO REMOTE**: The `antigravity-dev` branch is strictly for local workspace history. **Executing `git push origin antigravity-dev` is STRICTLY FORBIDDEN**.
+3. **`main` Release Commit Protocol**: `main` is strictly used for clean version release commits (`v1.0.0`, `v1.1.0`). When pushing to `main`, bring the current snapshot from `antigravity-dev` as a single clean release commit onto `main`, push `main` to `origin/main`, and **immediately return to `antigravity-dev`**.
+4. **NO UNSOLICITED PUSHES**: NEVER execute `git push` unless explicitly prompted by the user.
 
 ## 1. Project Directory & File Map
 
@@ -13,19 +20,19 @@
 | `src/core/fingerprint/canonicalJson.ts` | 26 | 1 | 0 |
 | `src/core/fingerprint/templateHasher.ts` | 133 | 0 | 0 |
 | `src/core/merge/mergeEngine.ts` | 97 | 0 | 0 |
-| `src/core/types/index.ts` | 155 | 0 | 16 |
+| `src/core/types/index.ts` | 171 | 0 | 17 |
 | `src/db/database.ts` | 81 | 2 | 1 |
 | `src/db/defaultTemplates.ts` | 322 | 0 | 0 |
 | `src/main.tsx` | 12 | 0 | 0 |
 | `src/services/RemoteSyncService.ts` | 51 | 0 | 0 |
 | `src/services/UpdateService.ts` | 45 | 0 | 1 |
-| `src/services/exportService.ts` | 164 | 4 | 0 |
+| `src/services/exportService.ts` | 241 | 4 | 0 |
 | `src/services/formLinkParser.ts` | 243 | 1 | 1 |
-| `src/styles/components.css` | 907 | 0 | 0 |
-| `src/styles/theme.css` | 679 | 0 | 0 |
-| `src/ui/builder/FormBuilder.tsx` | 1618 | 1 | 0 |
-| `src/ui/cms/EditSubmissionModal.tsx` | 418 | 1 | 0 |
-| `src/ui/cms/SpreadsheetGrid.tsx` | 719 | 1 | 0 |
+| `src/styles/components.css` | 922 | 0 | 0 |
+| `src/styles/theme.css` | 680 | 0 | 0 |
+| `src/ui/builder/FormBuilder.tsx` | 1850 | 1 | 0 |
+| `src/ui/cms/EditSubmissionModal.tsx` | 582 | 1 | 0 |
+| `src/ui/cms/SpreadsheetGrid.tsx` | 756 | 1 | 0 |
 | `src/ui/components/LongPressTooltip.tsx` | 90 | 1 | 0 |
 | `src/ui/components/PrivacyModal.tsx` | 84 | 1 | 0 |
 | `src/ui/components/ResetCanvasModal.tsx` | 123 | 1 | 0 |
@@ -34,9 +41,9 @@
 | `src/ui/components/TemplateGalleryModal.tsx` | 370 | 1 | 0 |
 | `src/ui/components/UserProfileModal.tsx` | 126 | 1 | 0 |
 | `src/ui/dashboard/FormsDashboard.tsx` | 399 | 1 | 0 |
-| `src/ui/entry/RapidEntry.tsx` | 830 | 1 | 0 |
-| `src/ui/help/HelpTab.tsx` | 423 | 1 | 0 |
-| `src/ui/import/DataConsolidator.tsx` | 381 | 1 | 0 |
+| `src/ui/entry/RapidEntry.tsx` | 995 | 1 | 0 |
+| `src/ui/help/HelpTab.tsx` | 427 | 1 | 0 |
+| `src/ui/import/DataConsolidator.tsx` | 396 | 1 | 0 |
 | `src/ui/layout/AppShell.tsx` | 241 | 1 | 0 |
 | `src/ui/merge/ConflictResolverModal.tsx` | 130 | 1 | 0 |
 
@@ -44,21 +51,22 @@
 
 ### `src/core/types/index.ts`
 - **type** `FieldType` (Line 7)
-- **interface** `FieldValidation` (Line 24)
-- **interface** `FieldOption` (Line 34)
-- **interface** `FormField` (Line 40)
-- **type** `BranchOperator` (Line 55)
-- **interface** `BranchingCondition` (Line 64)
-- **interface** `BranchingRule` (Line 70)
-- **interface** `FormSection` (Line 76)
-- **interface** `FormTemplateSettings` (Line 84)
-- **interface** `FormTemplate` (Line 95)
-- **type** `SubmissionStatus` (Line 108)
-- **interface** `ProvenanceEntry` (Line 110)
-- **interface** `FormSubmission` (Line 119)
-- **interface** `FieldConflict` (Line 134)
-- **interface** `MergeResult` (Line 142)
-- **interface** `UserProfile` (Line 148)
+- **type** `AllowedFileType` (Line 25)
+- **interface** `FieldValidation` (Line 36)
+- **interface** `FieldOption` (Line 50)
+- **interface** `FormField` (Line 56)
+- **type** `BranchOperator` (Line 71)
+- **interface** `BranchingCondition` (Line 80)
+- **interface** `BranchingRule` (Line 86)
+- **interface** `FormSection` (Line 92)
+- **interface** `FormTemplateSettings` (Line 100)
+- **interface** `FormTemplate` (Line 111)
+- **type** `SubmissionStatus` (Line 124)
+- **interface** `ProvenanceEntry` (Line 126)
+- **interface** `FormSubmission` (Line 135)
+- **interface** `FieldConflict` (Line 150)
+- **interface** `MergeResult` (Line 158)
+- **interface** `UserProfile` (Line 164)
 
 ### `src/db/database.ts`
 - **interface** `StorageMetrics` (Line 49)
@@ -87,9 +95,9 @@
 
 ### `src/services/exportService.ts`
 - **function** `exportToCSV` (Line 12) — `export function exportToCSV(template: FormTemplate, submissions: FormSubmission[...`
-- **function** `exportFormDataPackage` (Line 115) — `export function exportFormDataPackage(template: FormTemplate, submissions: FormS...`
-- **function** `exportFormTemplatePackage` (Line 126) — `export function exportFormTemplatePackage(template: FormTemplate): string {`
-- **function** `downloadBlob` (Line 154) — `export function downloadBlob(blob: Blob, filename: string) {`
+- **function** `exportFormDataPackage` (Line 192) — `export function exportFormDataPackage(template: FormTemplate, submissions: FormS...`
+- **function** `exportFormTemplatePackage` (Line 203) — `export function exportFormTemplatePackage(template: FormTemplate): string {`
+- **function** `downloadBlob` (Line 231) — `export function downloadBlob(blob: Blob, filename: string) {`
 
 ### `src/services/formLinkParser.ts`
 - **function** `normalizeFormUrl` (Line 186) — `export function normalizeFormUrl(inputUrl: string): string {`

@@ -98,6 +98,12 @@ function generateMarkdown() {
   md += `> **Auto-Generated File**: Do not edit manually. Updated automatically via \`npm run build:reference\`.\n`;
   md += `> Last generated: ${new Date().toISOString()}\n\n`;
 
+  md += `## ⚠️ CRITICAL GIT BRANCHING & RELEASE SAFEGUARD DIRECTIVE\n\n`;
+  md += `1. **\`antigravity-dev\` is SACRED**: All micro-commits on \`antigravity-dev\` represent detailed local development history. **NEVER squash, reset, rebase, or mutate history on \`antigravity-dev\`**.\n`;
+  md += `2. **NEVER PUSH \`antigravity-dev\` TO REMOTE**: The \`antigravity-dev\` branch is strictly for local workspace history. **Executing \`git push origin antigravity-dev\` is STRICTLY FORBIDDEN**.\n`;
+  md += `3. **\`main\` Release Commit Protocol**: \`main\` is strictly used for clean version release commits (\`v1.0.0\`, \`v1.1.0\`). When pushing to \`main\`, bring the current snapshot from \`antigravity-dev\` as a single clean release commit onto \`main\`, push \`main\` to \`origin/main\`, and **immediately return to \`antigravity-dev\`**.\n`;
+  md += `4. **NO UNSOLICITED PUSHES**: NEVER execute \`git push\` unless explicitly prompted by the user.\n\n`;
+
   md += `## 1. Project Directory & File Map\n\n`;
   md += `| Relative File Path | Total Lines | Exports Count | Types/Interfaces |\n`;
   md += `| :--- | :---: | :---: | :---: |\n`;

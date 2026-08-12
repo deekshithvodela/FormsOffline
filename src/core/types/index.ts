@@ -19,7 +19,19 @@ export type FieldType =
   | 'location'
   | 'linear_scale'
   | 'rating'
+  | 'file_upload'
   | 'title_block';
+
+export type AllowedFileType =
+  | 'document'
+  | 'spreadsheet'
+  | 'presentation'
+  | 'drawing'
+  | 'image'
+  | 'pdf'
+  | 'audio'
+  | 'video'
+  | 'archive';
 
 export interface FieldValidation {
   required?: boolean;
@@ -29,6 +41,10 @@ export interface FieldValidation {
   customErrorMessage?: string;
   minLabel?: string;
   maxLabel?: string;
+  // File Upload Configuration (Google Forms Style)
+  allowedFileTypes?: AllowedFileType[];
+  maxFileSizeMB?: number; // e.g. 1, 5, 10, 100 MB
+  maxFileCount?: number; // e.g. 1, 5, 10 files
 }
 
 export interface FieldOption {

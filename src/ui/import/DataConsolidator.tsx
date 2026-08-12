@@ -67,20 +67,39 @@ export const DataConsolidator: React.FC = () => {
     reader.readAsText(file);
   };
 
-  // Multi-File Consolidator Upload Handler
-  const handleMultiFileConsolidatorUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Multi-File Consolidator Upload Handler (supports .formdata, .json, and .zip packages)
+  const handleMultiFileConsolidatorUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setConsolidatorStatus(null);
     const parsedFiles: { filename: string; submissions: FormSubmission[]; template?: FormTemplate }[] = [];
 
-    let processed = 0;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const text = event.target?.result as string;
+    const fileList = Array.from(files);
+    for (const file of fileList) {
+      try {
+        if (file.name.endsWith('.zip')) {
+          const JSZip = (await import('jszip')).default;
+          const zip = await JSZip.loadAsync(file);
+          
+          // Look for any embedded .formdata, .json, or manifest package file inside the zip archive
+          const jsonFileName = Object.keys(zip.files).find(
+            (name) => !zip.files[name].dir && (name.endsWith('.formdata') || name.endsWith('.json') || name.includes('manifest'))
+          );
+
+          if (jsonFileName) {
+            const jsonText = await zip.files[jsonFileName].async('string');
+            const parsed = JSON.parse(jsonText);
+            if (parsed.submissions && Array.isArray(parsed.submissions)) {
+              parsedFiles.push({
+                filename: file.name,
+                submissions: parsed.submissions,
+                template: parsed.template
+              });
+            }
+          }
+        } else {
+          const text = await file.text();
           const parsed = JSON.parse(text);
           if (parsed.submissions && Array.isArray(parsed.submissions)) {
             parsedFiles.push({
@@ -89,19 +108,15 @@ export const DataConsolidator: React.FC = () => {
               template: parsed.template
             });
           }
-        } catch (err) {
-          console.error('Error reading file for consolidator:', file.name, err);
         }
+      } catch (err) {
+        console.error('Error processing file for consolidator:', file.name, err);
+      }
+    }
 
-        processed++;
-        if (processed === files.length) {
-          setConsolidatorFiles(parsedFiles);
-          const totalRecords = parsedFiles.reduce((acc, curr) => acc + curr.submissions.length, 0);
-          setConsolidatorStatus(`Ingested ${parsedFiles.length} file(s) containing ${totalRecords} total record(s). Ready to de-duplicate & merge!`);
-        }
-      };
-      reader.readAsText(file);
-    });
+    setConsolidatorFiles(parsedFiles);
+    const totalRecords = parsedFiles.reduce((acc, curr) => acc + curr.submissions.length, 0);
+    setConsolidatorStatus(`Ingested ${parsedFiles.length} file(s) containing ${totalRecords} total record(s). Ready to de-duplicate & merge!`);
   };
 
   const handleExportConsolidatedMaster = async (type: 'formdata' | 'xlsx' | 'csv') => {
@@ -205,12 +220,12 @@ export const DataConsolidator: React.FC = () => {
             }}
           >
             <Layers size={36} color="var(--accent-purple)" style={{ marginBottom: '0.4rem' }} />
-            <span style={{ display: 'block', fontWeight: 600, fontSize: '0.95rem' }}>Select Multiple Response Files (.formdata)</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select or drop multiple operator package files</span>
+            <span style={{ display: 'block', fontWeight: 600, fontSize: '0.95rem' }}>Select Multiple Response Files (.formdata, .zip)</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select or drop multiple operator package or zip files</span>
             <input
               type="file"
               multiple
-              accept=".json,.formdata"
+              accept=".json,.formdata,.zip"
               onChange={handleMultiFileConsolidatorUpload}
               style={{ display: 'none' }}
             />

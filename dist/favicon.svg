@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Main Form Card Container -->
+  <g filter="url(#shadow)">
+    <rect x="96" y="80" width="320" height="352" rx="24" fill="#1e293b" stroke="#334155" stroke-width="4" />
+    <!-- Header Banner -->
+    <rect x="96" y="80" width="320" height="72" rx="24" fill="url(#headerGrad)" />
+    <rect x="96" y="128" width="320" height="24" fill="url(#headerGrad)" />
+
+    <!-- Form Lines / Inputs -->
+    <!-- Title Placeholder -->
+    <rect x="136" y="102" width="160" height="24" rx="6" fill="#ffffff" opacity="0.9" />
+
+    <!-- Input Box 1 -->
+    <rect x="136" y="184" width="240" height="44" rx="10" fill="#0f172a" stroke="#475569" stroke-width="3" />
+    <circle cx="164" cy="206" r="8" fill="#8b5cf6" />
+    <rect x="188" y="200" width="120" height="12" rx="4" fill="#94a3b8" />
+
+    <!-- Input Box 2 -->
+    <rect x="136" y="248" width="240" height="44" rx="10" fill="#0f172a" stroke="#475569" stroke-width="3" />
+    <rect x="156" y="260" width="16" height="16" rx="4" fill="#6366f1" />
+    <rect x="188" y="264" width="140" height="12" rx="4" fill="#94a3b8" />
+
+    <!-- Input Box 3 -->
+    <rect x="136" y="312" width="240" height="44" rx="10" fill="#0f172a" stroke="#475569" stroke-width="3" />
+    <rect x="156" y="324" width="16" height="16" rx="4" fill="#334155" />
+    <rect x="188" y="328" width="90" height="12" rx="4" fill="#64748b" />
+  </g>
+
+  <!-- 100% Offline Green Checkmark Badge -->
+  <g filter="url(#shadow)">
+    <circle cx="380" cy="380" r="54" fill="#10b981" stroke="#0f172a" stroke-width="8" />
+    <path d="M354 380 L372 398 L408 362" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

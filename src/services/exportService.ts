@@ -40,14 +40,25 @@ export function exportToCSV(template: FormTemplate, submissions: FormSubmission[
       const val = sub.data[f.id];
       if (val === undefined || val === null) return '""';
       
-      // Clean single-cell array formatting for Checkboxes / Multi-selects
+      // Clean single-cell array formatting for Checkboxes / Multi-selects / File Uploads
       if (Array.isArray(val)) {
+        if (f.type === 'file_upload') {
+          const names = val.map((v) => (typeof v === 'object' && v?.name ? v.name : 'Attached File'));
+          return `"${names.join(', ').replace(/"/g, '""')}"`;
+        }
         const formattedArrayStr = val.join(', ').replace(/"/g, '""');
         return `"${formattedArrayStr}"`;
       }
       
       if (typeof val === 'object') {
+        if (f.type === 'file_upload' && val.name) {
+          return `"${String(val.name).replace(/"/g, '""')}"`;
+        }
         return `"${canonicalizeJSON(val).replace(/"/g, '""')}"`;
+      }
+
+      if (f.type === 'signature' && typeof val === 'string' && val.startsWith('data:image')) {
+        return `"[Signature Image Embedded]"`;
       }
       
       // Standard string / number escaping for CSV
@@ -112,6 +123,72 @@ export async function exportToXLSX(template: FormTemplate, submissions: FormSubm
   return new Blob([xlsxBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
+/**
+ * All-in-One Portable ZIP Package Exporter (JSZip)
+ * Bundles `Responses.xlsx` + `attachments/` folder containing exported PNG/JPG signatures and uploaded documents.
+ */
+export async function exportToZIPPackage(template: FormTemplate, submissions: FormSubmission[]): Promise<Blob> {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  const attachmentsFolder = zip.folder('attachments');
+
+  // Clone submissions data inserting relative portable file path references (e.g., "attachments/Signature_Rec1_Fq1.png")
+  const formattedSubmissions: FormSubmission[] = submissions.map((sub, sIdx) => {
+    const newData = { ...sub.data };
+    const fields = template.sections.flatMap((s) => s.fields);
+
+    fields.forEach((f) => {
+      const val = sub.data[f.id];
+      if (!val) return;
+
+      const recShortId = sub.id.split('_').pop() || sIdx;
+
+      // Handle Signature / Image Base64 Data URLs
+      if (f.type === 'signature' && typeof val === 'string' && val.startsWith('data:image')) {
+        const fileExt = val.includes('png') ? 'png' : 'jpg';
+        const fileName = `Signature_Rec${recShortId}_Field${f.id}.${fileExt}`;
+        const base64Data = val.replace(/^data:image\/\w+;base64,/, '');
+        attachmentsFolder?.file(fileName, base64Data, { base64: true });
+        newData[f.id] = `attachments/${fileName}`;
+      }
+
+      // Handle File Upload Answers
+      if (f.type === 'file_upload') {
+        const filesArray = Array.isArray(val) ? val : [val];
+        const relativePaths: string[] = [];
+
+        filesArray.forEach((fileObj: any, fIdx: number) => {
+          if (fileObj && typeof fileObj === 'object' && fileObj.data && fileObj.data.startsWith('data:')) {
+            const rawName = fileObj.name || `Upload_${fIdx + 1}.dat`;
+            const fileName = `Rec${recShortId}_${rawName}`;
+            const base64Data = fileObj.data.replace(/^data:[^;]+;base64,/, '');
+            attachmentsFolder?.file(fileName, base64Data, { base64: true });
+            relativePaths.push(`attachments/${fileName}`);
+          } else if (typeof fileObj === 'string' && fileObj.startsWith('data:')) {
+            const fileName = `Upload_Rec${recShortId}_F${f.id}_${fIdx + 1}.bin`;
+            const base64Data = fileObj.replace(/^data:[^;]+;base64,/, '');
+            attachmentsFolder?.file(fileName, base64Data, { base64: true });
+            relativePaths.push(`attachments/${fileName}`);
+          }
+        });
+
+        if (relativePaths.length > 0) {
+          newData[f.id] = relativePaths.join(', ');
+        }
+      }
+    });
+
+    return { ...sub, data: newData };
+  });
+
+  const xlsxBlob = await exportToXLSX(template, formattedSubmissions);
+  const xlsxArrayBuffer = await xlsxBlob.arrayBuffer();
+  const safeTitle = template.title.replace(/[^a-zA-Z0-9_-]/g, '_') || 'Form';
+  zip.file(`${safeTitle}_Responses.xlsx`, xlsxArrayBuffer);
+
+  return await zip.generateAsync({ type: 'blob' });
+}
+
 export function exportFormDataPackage(template: FormTemplate, submissions: FormSubmission[]): string {
   const pkg = {
     format: 'FormsOffline_FormData',
@@ -120,7 +197,7 @@ export function exportFormDataPackage(template: FormTemplate, submissions: FormS
     template,
     submissions
   };
-  return canonicalizeJSON(pkg);
+  return JSON.stringify(pkg, null, 2);
 }
 
 export function exportFormTemplatePackage(template: FormTemplate): string {
@@ -130,7 +207,7 @@ export function exportFormTemplatePackage(template: FormTemplate): string {
     exportedAt: new Date().toISOString(),
     template
   };
-  return canonicalizeJSON(pkg);
+  return JSON.stringify(pkg, null, 2);
 }
 
 export async function exportFullDatabaseBackup(): Promise<string> {
@@ -148,7 +225,7 @@ export async function exportFullDatabaseBackup(): Promise<string> {
       userProfile
     }
   };
-  return canonicalizeJSON(backupPkg);
+  return JSON.stringify(backupPkg, null, 2);
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

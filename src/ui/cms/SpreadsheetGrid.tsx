@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Search, Download, History, X, Database, Folder, Trash2, CheckSquare, Square, AlertTriangle, Plus, Package, Share2, ChevronDown, ChevronRight, ShieldCheck, Edit3, Star } from 'lucide-react';
+import { Search, Download, History, X, Database, Folder, Trash2, CheckSquare, Square, AlertTriangle, Plus, Package, Share2, ChevronDown, ChevronRight, ShieldCheck, Edit3, Star, Archive, FileText } from 'lucide-react';
 import { FormSubmission, FormTemplate, FormField, ProvenanceEntry } from '../../core/types';
 import { db } from '../../db/database';
-import { exportToCSV, exportToXLSX, exportFormDataPackage, exportFormTemplatePackage, downloadBlob } from '../../services/exportService';
+import { exportToCSV, exportToXLSX, exportToZIPPackage, exportFormDataPackage, exportFormTemplatePackage, downloadBlob } from '../../services/exportService';
 import { TemplateGalleryModal } from '../components/TemplateGalleryModal';
 import { EditSubmissionModal } from './EditSubmissionModal';
 
@@ -113,10 +113,32 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     }
 
     if (f.type === 'signature') {
+      if (typeof val === 'string' && val.startsWith('data:image')) {
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <img src={val} alt="Signature" style={{ height: '24px', borderRadius: '3px', background: '#0f172a', border: '1px solid var(--border-color)' }} />
+            <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>Signed</span>
+          </div>
+        );
+      }
       return (
         <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
           ✍️ Signed
         </span>
+      );
+    }
+
+    if (f.type === 'file_upload') {
+      const filesArray = Array.isArray(val) ? val : [val];
+      const count = filesArray.length;
+      const firstName = filesArray[0]?.name || (typeof filesArray[0] === 'string' ? 'File' : 'Attachment');
+
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <FileText size={14} color="var(--primary)" />
+          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{firstName}</span>
+          {count > 1 && <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>+{count - 1}</span>}
+        </div>
       );
     }
 
@@ -182,6 +204,12 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     if (!selectedTemplate) return;
     const blob = await exportToXLSX(selectedTemplate, filteredSubmissions);
     downloadBlob(blob, `${selectedTemplate.title.replace(/\s+/g, '_')}_records.xlsx`);
+  };
+
+  const handleExportZIPPackage = async () => {
+    if (!selectedTemplate) return;
+    const blob = await exportToZIPPackage(selectedTemplate, filteredSubmissions);
+    downloadBlob(blob, `${selectedTemplate.title.replace(/\s+/g, '_')}_ZIP_Package.zip`);
   };
 
   const handleExportFormDataPackage = () => {
@@ -370,6 +398,15 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
                 >
                   <Download size={14} color="var(--accent-green)" />
                   <span>Excel Workbook (.xlsx)</span>
+                </button>
+
+                <button
+                  className="btn btn-outline"
+                  onClick={() => { handleExportZIPPackage(); setActiveShareMenuId(null); }}
+                  style={{ justifyContent: 'flex-start', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
+                >
+                  <Archive size={14} color="var(--accent-amber)" />
+                  <span>ZIP Package (Excel + Files)</span>
                 </button>
 
                 <button

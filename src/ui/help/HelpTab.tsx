@@ -203,23 +203,28 @@ export const HelpTab: React.FC = () => {
     {
       id: 'export',
       stepNum: 'Step 8',
-      title: 'Data Export Formats & Multi-Sheet Excel Generation',
+      title: 'Data Export Formats, Consolidation Strategy & Multi-Sheet Excel',
       category: 'Exports & Reports',
       icon: <Download size={20} color="var(--accent-blue)" />,
-      summary: 'Export clean CSV files, multi-sheet Excel workbooks with version audit logs, and raw JSON packages.',
+      summary: 'Export clean CSV files, multi-sheet Excel workbooks with version audit logs, raw JSON packages, and self-contained ZIP packages.',
       steps: [
         {
-          title: '1. Standard CSV Export (.csv)',
+          title: '1. Strategy: Forms WITHOUT Files vs Forms WITH Files',
+          description: 'For forms WITHOUT file uploads, the .formdata JSON package is optimal for fast, light cross-device transfer. For forms WITH file attachments (images, PDFs, signatures), export a Portable ZIP Package (.zip), which bundles Responses.xlsx with an attachments/ folder for both human inspection and direct import into Data Consolidator.',
+          tip: 'Data Consolidator seamlessly ingests both .formdata JSON packages and .zip archives!'
+        },
+        {
+          title: '2. Standard CSV Export (.csv)',
           description: 'In Dataset CMS, click "Share / Export" -> "Export CSV (.csv)". Generates a standard CSV spreadsheet with "Submitted At (UTC)" strictly formatted as Column 1.'
         },
         {
-          title: '2. Multi-Sheet Excel Workbook (.xlsx)',
+          title: '3. Multi-Sheet Excel Workbook (.xlsx)',
           description: 'Click "Share / Export" -> "Export Excel (.xlsx)". Generates a 2-sheet Excel file: Sheet 1 ("Submissions") contains clean response data; Sheet 2 ("Version Audit Log") contains full audit trails of creation and edit timestamps.',
           tip: 'Code Splitting: SheetJS is lazy-loaded on demand to ensure lightning-fast initial app load times under 200KB.'
         },
         {
-          title: '3. Response Package (.formdata)',
-          description: 'Exports raw canonical JSON payload containing all submission objects and cryptographic provenance chains for multi-device consolidation.'
+          title: '4. Response Package (.formdata) & Portable ZIP (.zip)',
+          description: '.formdata exports human-readable JSON payloads formatted for multi-device union merging. Portable ZIP packages bundle Excel sheets with relative file attachments for complete offline portability.'
         }
       ]
     },

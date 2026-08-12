@@ -95,13 +95,19 @@ Convert live Google Forms and Microsoft Forms links into 100% offline form templ
 
 ---
 
-## Step 8: Data Export Formats & Multi-Sheet Excel Generation
+## Step 8: Data Export Formats, Consolidation Strategy & Multi-Sheet Excel
 
+### **Consolidation Strategy Guide**
+- **Forms WITHOUT File Attachments**: The **Response Package (`.formdata`)** export is the optimal format. It provides compact, instant JSON data exchange between offline devices and rapid union consolidation.
+- **Forms WITH File Attachments (Images, PDFs, Signatures)**: The **ZIP Package (`.zip`)** export is the optimal strategy. The ZIP package bundles `Responses.xlsx` alongside the self-contained `attachments/` directory with relative cell references. ZIP packages can be imported directly into the **Data Consolidator** across field devices!
+
+### **Export Formats Summary**
 - **Standard CSV Export (.csv)**: Generates standard CSV with `Submitted At (UTC)` strictly formatted as Column 1.
 - **Multi-Sheet Excel Workbook (.xlsx)**: Generates a 2-sheet Excel file:
   - **Sheet 1 (`Submissions`)**: Clean response data.
   - **Sheet 2 (`Version Audit Log`)**: Full audit trails of creation and edit timestamps.
-- **Response Package (.formdata)**: Raw canonical JSON payload for cross-device consolidation.
+- **Response Package (.formdata)**: Raw canonical JSON payload formatted for multi-device consolidation and text editor readability.
+- **Portable ZIP Archive (.zip)**: Complete portable dataset bundling Excel spreadsheets with relative attachments for human inspection and machine consolidation.
 
 ---
 

@@ -70,7 +70,8 @@
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
+  position: relative;
 }
 
 @media (max-width: 768px) {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw } from 'lucide-react';
-import { FormField, FormSection, FormTemplate, FieldType, FieldOption, FormTemplateSettings, UserProfile } from '../../core/types';
+import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw, Upload } from 'lucide-react';
+import { FormField, FormSection, FormTemplate, FieldType, FieldOption, FormTemplateSettings, UserProfile, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { generateTemplateFingerprint } from '../../core/fingerprint/templateHasher';
 import { getNextSectionId } from '../../core/branching/evaluator';
@@ -56,6 +56,29 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [openMenuFieldId, setOpenMenuFieldId] = useState<string | null>(null);
+  const [paletteOffsetTop, setPaletteOffsetTop] = useState<number>(0);
+  const builderCanvasRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!builderCanvasRef.current) return;
+    let activeEl: HTMLElement | null = null;
+    if (activeFieldId) {
+      activeEl = builderCanvasRef.current.querySelector(`[data-field-id="${activeFieldId}"]`);
+    }
+    if (!activeEl && activeSectionId) {
+      activeEl = builderCanvasRef.current.querySelector(`[data-section-id="${activeSectionId}"]`);
+    }
+    if (!activeEl) {
+      activeEl = builderCanvasRef.current.querySelector(`[data-header-card="true"]`);
+    }
+
+    if (activeEl && builderCanvasRef.current) {
+      const canvasRect = builderCanvasRef.current.getBoundingClientRect();
+      const cardRect = activeEl.getBoundingClientRect();
+      const offset = Math.max(0, cardRect.top - canvasRect.top);
+      setPaletteOffsetTop(offset);
+    }
+  }, [activeFieldId, activeSectionId, sections]);
   const [isPreview, setIsPreview] = useState(false);
   const [previewSectionIndex, setPreviewSectionIndex] = useState(0);
   const [previewFormData, setPreviewFormData] = useState<Record<string, any>>({});
@@ -89,9 +112,16 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Drag and Drop state
+  // Drag and Drop state (Questions Canvas)
   const [draggedItem, setDraggedItem] = useState<{ sectionId: string; fieldId: string; fieldIndex: number } | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<{ sectionId: string; fieldId?: string; dropPosition?: 'before' | 'after' } | null>(null);
+
+  // Section Reorder Modal Drag & Drop state (Isolated exclusively to Reorder Sections Modal)
+  const [modalDraggedSectionIdx, setModalDraggedSectionIdx] = useState<number | null>(null);
+  const [modalDragOverSectionIdx, setModalDragOverSectionIdx] = useState<number | null>(null);
+  const [modalSectionDropPos, setModalSectionDropPos] = useState<'before' | 'after'>('before');
+  const [modalTouchStartIdx, setModalTouchStartIdx] = useState<number | null>(null);
+  const sectionModalListRef = useRef<HTMLDivElement>(null);
 
   const optionInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const imageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -127,6 +157,86 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
     updated[index] = updated[targetIdx];
     updated[targetIdx] = temp;
     setSections(updated);
+  };
+
+  const reorderSectionModal = (srcIdx: number, targetIdx: number, dropPos: 'before' | 'after') => {
+    if (srcIdx === targetIdx) return;
+    setSections((prev) => {
+      const updated = [...prev];
+      const [movedSec] = updated.splice(srcIdx, 1);
+      let insertIdx = targetIdx;
+      if (srcIdx < targetIdx) {
+        insertIdx = dropPos === 'after' ? targetIdx : targetIdx - 1;
+      } else {
+        insertIdx = dropPos === 'after' ? targetIdx + 1 : targetIdx;
+      }
+      insertIdx = Math.max(0, Math.min(updated.length, insertIdx));
+      updated.splice(insertIdx, 0, movedSec);
+      return updated;
+    });
+  };
+
+  const handleModalSectionDragStart = (e: React.DragEvent, idx: number) => {
+    e.stopPropagation();
+    setModalDraggedSectionIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(idx));
+  };
+
+  const handleModalSectionDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos: 'before' | 'after' = e.clientY >= rect.top + rect.height / 2 ? 'after' : 'before';
+    setModalDragOverSectionIdx(idx);
+    setModalSectionDropPos(pos);
+  };
+
+  const handleModalSectionDrop = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (modalDraggedSectionIdx !== null) {
+      reorderSectionModal(modalDraggedSectionIdx, targetIdx, modalSectionDropPos);
+    }
+    setModalDraggedSectionIdx(null);
+    setModalDragOverSectionIdx(null);
+  };
+
+  const handleModalSectionDragEnd = () => {
+    setModalDraggedSectionIdx(null);
+    setModalDragOverSectionIdx(null);
+  };
+
+  const handleModalSectionTouchStart = (idx: number) => {
+    setModalTouchStartIdx(idx);
+    setModalDraggedSectionIdx(idx);
+  };
+
+  const handleModalSectionTouchMove = (e: React.TouchEvent) => {
+    if (modalTouchStartIdx === null || !e.touches[0]) return;
+    const touchY = e.touches[0].clientY;
+    if (sectionModalListRef.current) {
+      const items = Array.from(sectionModalListRef.current.querySelectorAll('.modal-list-item-row'));
+      items.forEach((item, idx) => {
+        const rect = item.getBoundingClientRect();
+        if (touchY >= rect.top && touchY <= rect.bottom) {
+          const pos = touchY >= rect.top + rect.height / 2 ? 'after' : 'before';
+          setModalDragOverSectionIdx(idx);
+          setModalSectionDropPos(pos);
+        }
+      });
+    }
+  };
+
+  const handleModalSectionTouchEnd = () => {
+    if (modalTouchStartIdx !== null && modalDragOverSectionIdx !== null) {
+      reorderSectionModal(modalTouchStartIdx, modalDragOverSectionIdx, modalSectionDropPos);
+    }
+    setModalTouchStartIdx(null);
+    setModalDraggedSectionIdx(null);
+    setModalDragOverSectionIdx(null);
   };
 
   const addFieldToActiveSection = (initialType: FieldType = 'text') => {
@@ -706,39 +816,66 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
               Re-sequence entire sections of your form. Section numbers will update automatically.
             </p>
 
-            <div className="modal-scroll-list">
-              {sections.map((sec, idx) => (
-                <div key={sec.id} className="modal-list-item-row">
-                  <div className="modal-item-info">
-                    <GripVertical size={18} color="var(--text-muted)" style={{ cursor: 'grab' }} />
-                    <div>
-                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Section {idx + 1}: {sec.title}</span>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                        {sec.fields.length} question(s)
-                      </span>
+            <div 
+              ref={sectionModalListRef}
+              className="modal-scroll-list"
+              onTouchMove={handleModalSectionTouchMove}
+              onTouchEnd={handleModalSectionTouchEnd}
+            >
+              {sections.map((sec, idx) => {
+                const isDragging = modalDraggedSectionIdx === idx;
+                const isDragOver = modalDragOverSectionIdx === idx;
+                let dragClass = '';
+                if (isDragging) dragClass = 'dragging';
+                else if (isDragOver) {
+                  dragClass = modalSectionDropPos === 'before' ? 'drag-over-top' : 'drag-over-bottom';
+                }
+
+                return (
+                  <div
+                    key={sec.id}
+                    draggable
+                    onDragStart={(e) => handleModalSectionDragStart(e, idx)}
+                    onDragOver={(e) => handleModalSectionDragOver(e, idx)}
+                    onDrop={(e) => handleModalSectionDrop(e, idx)}
+                    onDragEnd={handleModalSectionDragEnd}
+                    onTouchStart={() => handleModalSectionTouchStart(idx)}
+                    className={`modal-list-item-row draggable-item-row ${dragClass}`}
+                    style={{ userSelect: 'none', cursor: 'grab' }}
+                  >
+                    <div className="modal-item-info">
+                      <GripVertical size={18} color="var(--text-muted)" style={{ cursor: 'grab', flexShrink: 0 }} />
+                      <div>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Section {idx + 1}: {sec.title}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                          {sec.fields.length} question(s)
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="btn btn-outline"
+                        disabled={idx === 0}
+                        onClick={() => moveSection(idx, 'up')}
+                        style={{ padding: '0.3rem' }}
+                        title="Move Section Up"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        className="btn btn-outline"
+                        disabled={idx === sections.length - 1}
+                        onClick={() => moveSection(idx, 'down')}
+                        style={{ padding: '0.3rem' }}
+                        title="Move Section Down"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
                     </div>
                   </div>
-
-                  <div style={{ display: 'flex', gap: '0.3rem' }}>
-                    <button
-                      className="btn btn-outline"
-                      disabled={idx === 0}
-                      onClick={() => moveSection(idx, 'up')}
-                      style={{ padding: '0.3rem' }}
-                    >
-                      <ArrowUp size={14} />
-                    </button>
-                    <button
-                      className="btn btn-outline"
-                      disabled={idx === sections.length - 1}
-                      onClick={() => moveSection(idx, 'down')}
-                      style={{ padding: '0.3rem' }}
-                    >
-                      <ArrowDown size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
@@ -907,10 +1044,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
           </div>
         </div>
       ) : (
-        <div className="builder-layout-grid">
+        <div className="builder-layout-grid" ref={builderCanvasRef}>
           <div>
             {/* Header Form Card */}
-            <div className="card" style={{ borderTop: '4px solid var(--primary)', position: 'relative' }}>
+            <div
+              className="card"
+              data-header-card="true"
+              onClick={() => setActiveFieldId(null)}
+              style={{ borderTop: '4px solid var(--primary)', position: 'relative' }}
+            >
               <input
                 type="text"
                 value={title}
@@ -1270,6 +1412,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 <option value="number">Number</option>
                                 <option value="date">Date</option>
                                 <option value="time">Time</option>
+                                <option value="file_upload">File Upload</option>
                                 <option value="signature">Digital Signature</option>
                                 <option value="location">Privacy Location (Region)</option>
                                 <option value="title_block">Title & Description Block</option>
@@ -1330,6 +1473,90 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                   placeholder="High bound label (e.g. Agree)"
                                   style={{ fontSize: '0.85rem' }}
                                 />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* File Upload Google Forms Style Configuration Panel */}
+                          {f.type === 'file_upload' && (
+                            <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', display: 'grid', gap: '0.85rem', border: '1px solid var(--border-color)' }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <Upload size={16} color="var(--primary)" />
+                                File Upload Settings
+                              </div>
+
+                              <div>
+                                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                  Allowed file types (Leave all unchecked to allow any file type):
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                                  {[
+                                    { id: 'document', label: 'Document' },
+                                    { id: 'spreadsheet', label: 'Spreadsheet' },
+                                    { id: 'presentation', label: 'Presentation' },
+                                    { id: 'drawing', label: 'Drawing' },
+                                    { id: 'image', label: 'Image' },
+                                    { id: 'pdf', label: 'PDF' },
+                                    { id: 'audio', label: 'Audio' },
+                                    { id: 'video', label: 'Video' },
+                                    { id: 'archive', label: 'Archive (Zip)' }
+                                  ].map((ft) => {
+                                    const currentAllowed = f.validation?.allowedFileTypes || [];
+                                    const isChecked = currentAllowed.includes(ft.id as AllowedFileType);
+
+                                    const toggleType = () => {
+                                      let nextTypes: AllowedFileType[];
+                                      if (isChecked) {
+                                        nextTypes = currentAllowed.filter((t) => t !== ft.id);
+                                      } else {
+                                        nextTypes = [...currentAllowed, ft.id as AllowedFileType];
+                                      }
+                                      updateField(sec.id, f.id, {
+                                        validation: { ...f.validation, allowedFileTypes: nextTypes }
+                                      });
+                                    };
+
+                                    return (
+                                      <label key={ft.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', cursor: 'pointer' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={toggleType}
+                                        />
+                                        {ft.label}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)' }}>
+                                <div>
+                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum number of files:</label>
+                                  <select
+                                    value={f.validation?.maxFileCount ?? 1}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileCount: Number(e.target.value) } })}
+                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                  >
+                                    <option value={1}>1</option>
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum file size:</label>
+                                  <select
+                                    value={f.validation?.maxFileSizeMB ?? 10}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileSizeMB: Number(e.target.value) } })}
+                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                  >
+                                    <option value={1}>1 MB</option>
+                                    <option value={5}>5 MB</option>
+                                    <option value={10}>10 MB</option>
+                                    <option value={100}>100 MB</option>
+                                  </select>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1547,53 +1774,58 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
           </div>
 
           {/* Sticky Right Action Palette (Google Forms Style) */}
-          <div
-            className="builder-action-palette"
-            style={{
-              position: 'sticky',
-              top: '5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              padding: '0.5rem',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-            }}
-          >
-            <LongPressTooltip label="Add Question">
-              <button
-                className="btn btn-outline"
-                onClick={() => addFieldToActiveSection('text')}
-                title="Add Question to Active Section"
-                style={{ padding: '0.6rem' }}
-              >
-                <Plus size={20} color="var(--primary)" />
-              </button>
-            </LongPressTooltip>
+          <div style={{ position: 'relative', height: '100%' }}>
+            <div
+              className="builder-action-palette"
+              style={{
+                position: 'sticky',
+                top: '5rem',
+                transform: `translateY(${paletteOffsetTop}px)`,
+                transition: 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                padding: '0.5rem',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                zIndex: 20
+              }}
+            >
+              <LongPressTooltip label="Add Question">
+                <button
+                  className="btn btn-outline"
+                  onClick={() => addFieldToActiveSection('text')}
+                  title="Add Question to Active Section"
+                  style={{ padding: '0.6rem' }}
+                >
+                  <Plus size={20} color="var(--primary)" />
+                </button>
+              </LongPressTooltip>
 
-            <LongPressTooltip label="Add Title Block">
-              <button
-                className="btn btn-outline"
-                onClick={() => addFieldToActiveSection('title_block')}
-                title="Add Title & Description Block"
-                style={{ padding: '0.6rem' }}
-              >
-                <Type size={20} color="var(--accent-amber)" />
-              </button>
-            </LongPressTooltip>
+              <LongPressTooltip label="Add Title Block">
+                <button
+                  className="btn btn-outline"
+                  onClick={() => addFieldToActiveSection('title_block')}
+                  title="Add Title & Description Block"
+                  style={{ padding: '0.6rem' }}
+                >
+                  <Type size={20} color="var(--accent-amber)" />
+                </button>
+              </LongPressTooltip>
 
-            <LongPressTooltip label="Add Section Break">
-              <button
-                className="btn btn-outline"
-                onClick={addSection}
-                title="Add Section Break"
-                style={{ padding: '0.6rem' }}
-              >
-                <Layers size={20} color="var(--accent-blue)" />
-              </button>
-            </LongPressTooltip>
+              <LongPressTooltip label="Add Section Break">
+                <button
+                  className="btn btn-outline"
+                  onClick={addSection}
+                  title="Add Section Break"
+                  style={{ padding: '0.6rem' }}
+                >
+                  <Layers size={20} color="var(--accent-blue)" />
+                </button>
+              </LongPressTooltip>
+            </div>
           </div>
         </div>
       )}
