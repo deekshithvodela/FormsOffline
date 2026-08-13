@@ -1,7 +1,7 @@
 # Forms Offline — Project Technical Reference Index
 
 > **Auto-Generated File**: Do not edit manually. Updated automatically via `npm run build:reference`.
-> Last generated: 2026-08-13T15:03:48.864Z
+> Last generated: 2026-08-13T22:00:12.389Z
 
 ## ⚠️ CRITICAL GIT BRANCHING & RELEASE SAFEGUARD DIRECTIVE
 
@@ -14,7 +14,7 @@
 
 | Relative File Path | Total Lines | Exports Count | Types/Interfaces |
 | :--- | :---: | :---: | :---: |
-| `src/App.tsx` | 115 | 1 | 0 |
+| `src/App.tsx` | 112 | 1 | 0 |
 | `src/core/branching/evaluator.ts` | 93 | 2 | 0 |
 | `src/core/crypto/e2ee.ts` | 84 | 0 | 0 |
 | `src/core/fingerprint/canonicalJson.ts` | 26 | 1 | 0 |
@@ -26,29 +26,30 @@
 | `src/main.tsx` | 12 | 0 | 0 |
 | `src/services/RemoteSyncService.ts` | 51 | 0 | 0 |
 | `src/services/UpdateService.ts` | 45 | 0 | 1 |
-| `src/services/exportService.ts` | 299 | 4 | 0 |
+| `src/services/exportService.ts` | 504 | 4 | 1 |
 | `src/services/formLinkParser.ts` | 243 | 1 | 1 |
-| `src/styles/components.css` | 923 | 0 | 0 |
-| `src/styles/theme.css` | 739 | 0 | 0 |
-| `src/ui/builder/FormBuilder.tsx` | 1873 | 1 | 0 |
-| `src/ui/cms/EditSubmissionModal.tsx` | 878 | 1 | 0 |
-| `src/ui/cms/SpreadsheetGrid.tsx` | 872 | 1 | 0 |
-| `src/ui/components/CameraCaptureModal.tsx` | 406 | 1 | 0 |
-| `src/ui/components/InstallAppModal.tsx` | 256 | 1 | 0 |
+| `src/styles/components.css` | 950 | 0 | 0 |
+| `src/styles/theme.css` | 832 | 0 | 0 |
+| `src/ui/builder/FormBuilder.tsx` | 2045 | 1 | 0 |
+| `src/ui/cms/EditSubmissionModal.tsx` | 912 | 1 | 0 |
+| `src/ui/cms/SpreadsheetGrid.tsx` | 979 | 1 | 0 |
+| `src/ui/components/CameraCaptureModal.tsx` | 411 | 1 | 0 |
+| `src/ui/components/InstallAppModal.tsx` | 261 | 1 | 0 |
 | `src/ui/components/LongPressTooltip.tsx` | 90 | 1 | 0 |
-| `src/ui/components/MediaPreviewModal.tsx` | 414 | 1 | 1 |
-| `src/ui/components/PrivacyModal.tsx` | 84 | 1 | 0 |
-| `src/ui/components/ResetCanvasModal.tsx` | 123 | 1 | 0 |
-| `src/ui/components/SaveTemplateModal.tsx` | 83 | 1 | 0 |
-| `src/ui/components/SmartFormImporterModal.tsx` | 168 | 1 | 0 |
-| `src/ui/components/TemplateGalleryModal.tsx` | 370 | 1 | 0 |
-| `src/ui/components/UserProfileModal.tsx` | 126 | 1 | 0 |
-| `src/ui/dashboard/FormsDashboard.tsx` | 402 | 1 | 0 |
-| `src/ui/entry/RapidEntry.tsx` | 1291 | 1 | 0 |
-| `src/ui/help/HelpTab.tsx` | 434 | 1 | 0 |
-| `src/ui/import/DataConsolidator.tsx` | 397 | 1 | 0 |
-| `src/ui/layout/AppShell.tsx` | 352 | 1 | 0 |
-| `src/ui/merge/ConflictResolverModal.tsx` | 130 | 1 | 0 |
+| `src/ui/components/MediaPreviewModal.tsx` | 1082 | 1 | 1 |
+| `src/ui/components/PrivacyModal.tsx` | 89 | 1 | 0 |
+| `src/ui/components/ResetCanvasModal.tsx` | 128 | 1 | 0 |
+| `src/ui/components/SaveTemplateModal.tsx` | 86 | 1 | 0 |
+| `src/ui/components/SmartFormImporterModal.tsx` | 173 | 1 | 0 |
+| `src/ui/components/TemplateGalleryModal.tsx` | 295 | 1 | 0 |
+| `src/ui/components/UserProfileModal.tsx` | 131 | 1 | 0 |
+| `src/ui/dashboard/FormsDashboard.tsx` | 452 | 1 | 0 |
+| `src/ui/entry/RapidEntry.tsx` | 1333 | 1 | 0 |
+| `src/ui/help/HelpTab.tsx` | 435 | 1 | 0 |
+| `src/ui/hooks/useBodyScrollLock.ts` | 42 | 1 | 0 |
+| `src/ui/import/DataConsolidator.tsx` | 376 | 1 | 0 |
+| `src/ui/layout/AppShell.tsx` | 362 | 1 | 0 |
+| `src/ui/merge/ConflictResolverModal.tsx` | 137 | 1 | 0 |
 | `src/vite-env.d.ts` | 2 | 0 | 0 |
 
 ## 2. Exported Interfaces & Type Registry
@@ -78,11 +79,14 @@
 ### `src/services/UpdateService.ts`
 - **interface** `UpdateInfo` (Line 8)
 
+### `src/services/exportService.ts`
+- **interface** `ImportResult` (Line 415)
+
 ### `src/services/formLinkParser.ts`
 - **interface** `LinkParseResult` (Line 4)
 
 ### `src/ui/components/MediaPreviewModal.tsx`
-- **interface** `MediaPreviewItem` (Line 4)
+- **interface** `MediaPreviewItem` (Line 11)
 
 ## 3. Exported APIs, Components & Utilities
 
@@ -104,67 +108,70 @@
 - **function** `exportToCSV` (Line 12) — `export function exportToCSV(template: FormTemplate, submissions: FormSubmission[...`
 - **function** `exportFormDataPackage` (Line 250) — `export function exportFormDataPackage(template: FormTemplate, submissions: FormS...`
 - **function** `exportFormTemplatePackage` (Line 261) — `export function exportFormTemplatePackage(template: FormTemplate): string {`
-- **function** `downloadBlob` (Line 289) — `export function downloadBlob(blob: Blob, filename: string) {`
+- **function** `downloadBlob` (Line 494) — `export function downloadBlob(blob: Blob, filename: string) {`
 
 ### `src/services/formLinkParser.ts`
 - **function** `normalizeFormUrl` (Line 186) — `export function normalizeFormUrl(inputUrl: string): string {`
 
 ### `src/ui/builder/FormBuilder.tsx`
-- **const** `FormBuilder` (Line 48) — `export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => ...`
+- **const** `FormBuilder` (Line 49) — `export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => ...`
 
 ### `src/ui/cms/EditSubmissionModal.tsx`
-- **const** `EditSubmissionModal` (Line 17) — `export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({`
+- **const** `EditSubmissionModal` (Line 18) — `export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({`
 
 ### `src/ui/cms/SpreadsheetGrid.tsx`
-- **const** `SpreadsheetGrid` (Line 17) — `export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({`
+- **const** `SpreadsheetGrid` (Line 18) — `export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({`
 
 ### `src/ui/components/CameraCaptureModal.tsx`
-- **const** `CameraCaptureModal` (Line 11) — `export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({`
+- **const** `CameraCaptureModal` (Line 12) — `export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({`
 
 ### `src/ui/components/InstallAppModal.tsx`
-- **const** `InstallAppModal` (Line 11) — `export const InstallAppModal: React.FC<InstallAppModalProps> = ({`
+- **const** `InstallAppModal` (Line 12) — `export const InstallAppModal: React.FC<InstallAppModalProps> = ({`
 
 ### `src/ui/components/LongPressTooltip.tsx`
 - **const** `LongPressTooltip` (Line 12) — `export const LongPressTooltip: React.FC<LongPressTooltipProps> = ({`
 
 ### `src/ui/components/MediaPreviewModal.tsx`
-- **const** `MediaPreviewModal` (Line 21) — `export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({`
+- **const** `MediaPreviewModal` (Line 28) — `export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({`
 
 ### `src/ui/components/PrivacyModal.tsx`
-- **const** `PrivacyModal` (Line 9) — `export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =...`
+- **const** `PrivacyModal` (Line 10) — `export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =...`
 
 ### `src/ui/components/ResetCanvasModal.tsx`
-- **const** `ResetCanvasModal` (Line 10) — `export const ResetCanvasModal: React.FC<ResetCanvasModalProps> = ({`
+- **const** `ResetCanvasModal` (Line 11) — `export const ResetCanvasModal: React.FC<ResetCanvasModalProps> = ({`
 
 ### `src/ui/components/SaveTemplateModal.tsx`
-- **const** `SaveTemplateModal` (Line 11) — `export const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({`
+- **const** `SaveTemplateModal` (Line 12) — `export const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({`
 
 ### `src/ui/components/SmartFormImporterModal.tsx`
-- **const** `SmartFormImporterModal` (Line 12) — `export const SmartFormImporterModal: React.FC<SmartFormImporterModalProps> = ({`
+- **const** `SmartFormImporterModal` (Line 13) — `export const SmartFormImporterModal: React.FC<SmartFormImporterModalProps> = ({`
 
 ### `src/ui/components/TemplateGalleryModal.tsx`
-- **const** `TemplateGalleryModal` (Line 13) — `export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({`
+- **const** `TemplateGalleryModal` (Line 14) — `export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({`
 
 ### `src/ui/components/UserProfileModal.tsx`
-- **const** `UserProfileModal` (Line 12) — `export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl...`
+- **const** `UserProfileModal` (Line 13) — `export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl...`
 
 ### `src/ui/dashboard/FormsDashboard.tsx`
-- **const** `FormsDashboard` (Line 12) — `export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>...`
+- **const** `FormsDashboard` (Line 13) — `export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>...`
 
 ### `src/ui/entry/RapidEntry.tsx`
-- **const** `RapidEntry` (Line 17) — `export const RapidEntry: React.FC<RapidEntryProps> = ({`
+- **const** `RapidEntry` (Line 18) — `export const RapidEntry: React.FC<RapidEntryProps> = ({`
 
 ### `src/ui/help/HelpTab.tsx`
 - **const** `HelpTab` (Line 18) — `export const HelpTab: React.FC = () => {`
+
+### `src/ui/hooks/useBodyScrollLock.ts`
+- **function** `useBodyScrollLock` (Line 13) — `export function useBodyScrollLock(isLocked: boolean): void {`
 
 ### `src/ui/import/DataConsolidator.tsx`
 - **const** `DataConsolidator` (Line 8) — `export const DataConsolidator: React.FC = () => {`
 
 ### `src/ui/layout/AppShell.tsx`
-- **const** `AppShell` (Line 17) — `export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil...`
+- **const** `AppShell` (Line 18) — `export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil...`
 
 ### `src/ui/merge/ConflictResolverModal.tsx`
-- **const** `ConflictResolverModal` (Line 14) — `export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({`
+- **const** `ConflictResolverModal` (Line 15) — `export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({`
 
 ## 4. CSS Custom Properties / Styling Tokens
 

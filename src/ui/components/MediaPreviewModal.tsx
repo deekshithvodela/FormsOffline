@@ -528,6 +528,11 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                   {fileMimeText}
                 </span>
               )}
+              {isPdf && pdfPageCount > 0 && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '0.2rem 0.45rem', borderRadius: '4px' }}>
+                  {pdfPageCount} {pdfPageCount === 1 ? 'Page' : 'Pages'}
+                </span>
+              )}
               {activeItem.capturedAt && (
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   {activeItem.capturedAt}
@@ -678,15 +683,14 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           </div>
         </div>
 
-        {/* Media Content Preview Body — Theme Reactive & In-App Native */}
+        {/* Media Content Preview Body — Layout Scaled & Scroll Synchronized */}
         <div
+          className="media-preview-scroll-viewport"
           style={{
             flex: 1,
             position: 'relative',
-            padding: isText || isDocx || isXlsx || isPdf ? '1rem' : '1.5rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            padding: isPdf ? '1.5rem 1.5rem 4rem 1.5rem' : isText || isDocx || isXlsx ? '1rem' : '1.5rem 1rem',
+            display: 'block',
             backgroundColor: isSignature ? '#050811' : 'var(--bg-primary)',
             overflow: 'auto',
             minHeight: '260px',
@@ -696,49 +700,44 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           }}
         >
           {isPdfRendering ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', margin: '4rem auto' }}>
               <div className="spinner" style={{ width: '28px', height: '28px', margin: '0 auto 1rem auto', border: '3px solid var(--border-color)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               <p style={{ fontSize: '0.9rem' }}>Rendering PDF Document in-app...</p>
             </div>
           ) : isPdf && pdfPageUrls && pdfPageUrls.length > 0 ? (
-            /* 1. Native In-App Visual Multi-Page PDF Viewer with Zoom */
+            /* 1. Native In-App Visual Multi-Page PDF Viewer with True Layout Dimension Zooming */
             <div
               style={{
-                width: '100%',
-                height: '100%',
-                maxHeight: 'calc(90vh - 180px)',
-                overflow: 'auto',
+                width: `${Math.round(100 * zoomLevel)}%`,
+                maxWidth: `${Math.round(760 * zoomLevel)}px`,
+                minWidth: `${Math.round(100 * zoomLevel)}%`,
+                margin: '0 auto',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '1.25rem',
-                padding: '0.5rem',
+                gap: '2rem',
                 boxSizing: 'border-box'
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1.25rem',
-                  transform: `scale(${zoomLevel})`,
-                  transformOrigin: 'top center',
-                  transition: 'transform 0.12s ease-out',
-                  maxWidth: '100%'
-                }}
-              >
-                {pdfPageUrls.map((pageUrl, pageIdx) => (
+              {pdfPageUrls.map((pageUrl, pageIdx) => (
+                <div
+                  key={pageIdx}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}
+                >
+                  {/* Unobstructed Page Canvas Card */}
                   <div
-                    key={pageIdx}
                     style={{
-                      position: 'relative',
+                      width: '100%',
                       background: '#ffffff',
                       boxShadow: 'var(--shadow-md)',
                       border: '1px solid var(--border-color)',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      maxWidth: '100%'
+                      borderRadius: '6px',
+                      overflow: 'hidden'
                     }}
                   >
                     <img
@@ -746,33 +745,36 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                       alt={`PDF Page ${pageIdx + 1}`}
                       style={{
                         display: 'block',
-                        maxWidth: '100%',
+                        width: '100%',
                         height: 'auto',
-                        maxHeight: '85vh',
                         objectFit: 'contain'
                       }}
                     />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        right: '8px',
-                        background: 'rgba(15, 23, 42, 0.75)',
-                        color: '#ffffff',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 600
-                      }}
-                    >
-                      Page {pageIdx + 1} of {pdfPageCount}
-                    </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Clean Page Label Below the Page (Zero Content Occlusion) */}
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 500,
+                      color: 'var(--text-secondary)',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      padding: '0.15rem 0.65rem',
+                      borderRadius: '9999px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    <span>Page {pageIdx + 1} of {pdfPageCount}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : isDocxParsing ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', margin: '4rem auto' }}>
               <div className="spinner" style={{ width: '28px', height: '28px', margin: '0 auto 1rem auto', border: '3px solid var(--border-color)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               <p style={{ fontSize: '0.9rem' }}>Parsing Word Document in-app...</p>
             </div>
@@ -790,7 +792,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 borderRadius: '10px',
                 padding: '1.5rem',
                 color: 'var(--text-primary)',
-                boxShadow: 'var(--shadow-md)'
+                boxShadow: 'var(--shadow-md)',
+                margin: 'auto'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
@@ -809,7 +812,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </div>
             </div>
           ) : isXlsxParsing ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', margin: '4rem auto' }}>
               <div className="spinner" style={{ width: '28px', height: '28px', margin: '0 auto 1rem auto', border: '3px solid var(--border-color)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               <p style={{ fontSize: '0.9rem' }}>Parsing Spreadsheet in-app...</p>
             </div>
@@ -824,7 +827,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
                 borderRadius: '10px',
-                padding: '1rem'
+                padding: '1rem',
+                margin: 'auto'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -848,25 +852,25 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </div>
             </div>
           ) : isImage && activeItem.dataUrl ? (
-            /* 4. Full-Resolution Image Viewer with Zoom */
+            /* 4. Full-Resolution Image Viewer with Layout-Driven Zoom */
             <div
               style={{
-                transform: `scale(${zoomLevel})`,
-                transition: 'transform 0.12s ease-out',
-                transformOrigin: 'center center',
+                width: `${Math.round(100 * zoomLevel)}%`,
+                maxWidth: `${Math.round(800 * zoomLevel)}px`,
+                margin: 'auto',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                maxWidth: '100%',
-                maxHeight: '100%'
+                paddingBottom: zoomLevel > 1 ? '2rem' : 0
               }}
             >
               <img
                 src={activeItem.dataUrl}
                 alt={displayTitle}
                 style={{
-                  maxWidth: '100%',
-                  maxHeight: 'calc(90vh - 180px)',
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: zoomLevel <= 1 ? 'calc(90vh - 180px)' : 'none',
                   objectFit: 'contain',
                   borderRadius: '6px',
                   boxShadow: 'var(--shadow-md)',
@@ -892,7 +896,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 textAlign: 'left',
-                lineHeight: 1.5
+                lineHeight: 1.5,
+                margin: 'auto'
               }}
             >
               {decodedText}
@@ -909,7 +914,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 maxWidth: '440px',
                 width: '100%',
                 boxShadow: 'var(--shadow-md)',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                margin: 'auto'
               }}
             >
               <Music size={48} color="#ec4899" style={{ margin: '0 auto 1rem auto' }} />
@@ -941,7 +947,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 maxWidth: '100%',
                 maxHeight: 'calc(90vh - 180px)',
                 borderRadius: '6px',
-                boxShadow: 'var(--shadow-md)'
+                boxShadow: 'var(--shadow-md)',
+                margin: 'auto'
               }}
             />
           ) : (
@@ -956,7 +963,8 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 maxWidth: '460px',
                 width: '100%',
                 boxShadow: 'var(--shadow-md)',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                margin: 'auto'
               }}
             >
               <div
@@ -998,7 +1006,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                 {activeItem.fileName || 'Attached Document'}
               </h4>
 
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                 <span className="badge badge-purple" style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}>
                   {fileMimeText}
                 </span>

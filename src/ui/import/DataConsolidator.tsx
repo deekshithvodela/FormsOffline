@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, FileText, Database, CheckCircle, AlertCircle, Layers, Share2, Combine, FileSpreadsheet, Package, ShieldCheck } from 'lucide-react';
+import { Upload, Download, FileText, Database, CheckCircle, AlertCircle, Share2, Combine, FileSpreadsheet, Package, Archive } from 'lucide-react';
 import { db } from '../../db/database';
 import { FormTemplate, FormSubmission } from '../../core/types';
-import { exportFullDatabaseBackup, exportFormTemplatePackage, exportFormDataPackage, exportToXLSX, exportToCSV, downloadBlob } from '../../services/exportService';
+import { exportFullDatabaseBackup, exportFullBackupArchive, exportFormTemplatePackage, exportFormDataPackage, exportToXLSX, exportToCSV, importPackageFile, downloadBlob } from '../../services/exportService';
 import { mergeSubmissions } from '../../core/merge/mergeEngine';
 
 export const DataConsolidator: React.FC = () => {
@@ -26,45 +26,22 @@ export const DataConsolidator: React.FC = () => {
     });
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setImportStatus(null);
     setErrorStatus(null);
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsed = JSON.parse(text);
-
-        if (parsed.format === 'FormsOffline_Template' && parsed.template) {
-          await db.templates.put(parsed.template);
-          setImportStatus(`Successfully imported Form Template: "${parsed.template.title}" (v${parsed.template.version})`);
-          db.templates.toArray().then(setTemplates);
-        } else if (parsed.format === 'FormsOffline_FormData' && parsed.template && parsed.submissions) {
-          await db.templates.put(parsed.template);
-          let addedCount = 0;
-          for (const sub of parsed.submissions) {
-            await db.submissions.put(sub);
-            addedCount++;
-          }
-          setImportStatus(`Imported Template "${parsed.template.title}" with ${addedCount} record(s)!`);
-          db.templates.toArray().then(setTemplates);
-        } else if (parsed.format === 'FormsOffline_DatabaseBackup' && parsed.database) {
-          for (const t of parsed.database.templates || []) await db.templates.put(t);
-          for (const s of parsed.database.submissions || []) await db.submissions.put(s);
-          setImportStatus(`Full Database Restore complete! Loaded templates & submissions.`);
-          db.templates.toArray().then(setTemplates);
-        } else {
-          setErrorStatus('Unrecognized file format or missing required payload data.');
-        }
-      } catch (err) {
-        setErrorStatus('Invalid JSON file format.');
-      }
-    };
-    reader.readAsText(file);
+    try {
+      const result = await importPackageFile(file);
+      setImportStatus(result.message);
+      db.templates.toArray().then(setTemplates);
+    } catch (err: any) {
+      setErrorStatus(err.message || 'Invalid package file format.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Multi-File Consolidator Upload Handler (supports .formdata, .json, and .zip packages)
@@ -182,6 +159,15 @@ export const DataConsolidator: React.FC = () => {
     downloadBlob(blob, `FormsOffline_FullBackup_${new Date().toISOString().slice(0, 10)}.formbackup`);
   };
 
+  const handleExportFullBackupArchive = async () => {
+    try {
+      const zipBlob = await exportFullBackupArchive();
+      downloadBlob(zipBlob, `FormsOffline_FullBackup_${new Date().toISOString().slice(0, 10)}.zip`);
+    } catch (err) {
+      console.error('Failed to export full backup archive:', err);
+    }
+  };
+
   return (
     <div style={{ display: 'grid', gap: '1.5rem' }}>
       {/* Header Banner */}
@@ -190,7 +176,7 @@ export const DataConsolidator: React.FC = () => {
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Data Consolidator Hub</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
-            Consolidate offline response packages (<code>.formdata</code>), share templates (<code>.formsoffline</code>), or restore full backups (<code>.formbackup</code>).
+            Consolidate offline response packages (<code>.formdata</code>), share templates (<code>.formsoffline</code>), or restore full backups (<code>.formbackup</code> / <code>.zip</code>).
           </p>
         </div>
       </div>
@@ -219,74 +205,61 @@ export const DataConsolidator: React.FC = () => {
               background: 'var(--bg-input)'
             }}
           >
-            <Layers size={36} color="var(--accent-purple)" style={{ marginBottom: '0.4rem' }} />
-            <span style={{ display: 'block', fontWeight: 600, fontSize: '0.95rem' }}>Select Multiple Response Files (.formdata, .zip)</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select or drop multiple operator package or zip files</span>
+            <Upload size={32} color="var(--accent-purple)" style={{ marginBottom: '0.5rem' }} />
+            <span style={{ display: 'block', fontWeight: 600, fontSize: '0.95rem' }}>Select Multiple .formdata Files</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Batch upload responses from multiple tablets / field phones
+            </span>
             <input
               type="file"
               multiple
-              accept=".json,.formdata,.zip"
+              accept=".formdata,.json,.zip"
               onChange={handleMultiFileConsolidatorUpload}
               style={{ display: 'none' }}
             />
           </label>
 
-          <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)', display: 'block', marginBottom: '0.4rem' }}>
-                Ingested Response Packages ({consolidatorFiles.length})
-              </strong>
-              {consolidatorFiles.length === 0 ? (
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No response files selected yet.</span>
-              ) : (
-                <ul style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '1.2rem', maxHeight: '75px', overflowY: 'auto' }}>
-                  {consolidatorFiles.map((item, idx) => (
-                    <li key={idx} style={{ marginBottom: '0.2rem' }}>
-                      <code>{item.filename}</code> ({item.submissions.length} records)
-                      <span className="badge badge-green" style={{ marginLeft: '0.4rem', fontSize: '0.7rem' }}>
-                        <ShieldCheck size={12} style={{ marginRight: '0.2rem' }} /> Schema Matched
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {consolidatorFiles.length > 0 && (
-              <div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-                  Export Consolidated Master:
-                </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="btn btn-primary" onClick={() => handleExportConsolidatedMaster('formdata')} style={{ flex: 1, fontSize: '0.8rem', justifyContent: 'center' }}>
-                    <Package size={14} />
-                    <span>.formdata Package</span>
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => handleExportConsolidatedMaster('xlsx')} style={{ flex: 1, fontSize: '0.8rem', justifyContent: 'center' }}>
-                    <FileSpreadsheet size={14} />
-                    <span>Master Excel</span>
-                  </button>
-                  <button className="btn btn-outline" onClick={() => handleExportConsolidatedMaster('csv')} style={{ flex: 1, fontSize: '0.8rem', justifyContent: 'center' }}>
-                    <Download size={14} />
-                    <span>CSV</span>
-                  </button>
-                </div>
-              </div>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Automated Deduplication Engine</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+              Merges submissions using cryptographic revision hashes. If multiple devices edited the same record, three-way merge automatically resolves non-conflicting edits and creates an audit trail.
+            </p>
           </div>
         </div>
 
         {consolidatorStatus && (
-          <div style={{ background: 'rgba(147, 51, 234, 0.15)', color: 'var(--accent-purple)', padding: '0.8rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ background: 'rgba(59,130,246,0.12)', color: 'var(--primary)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <CheckCircle size={16} />
             <span>{consolidatorStatus}</span>
           </div>
         )}
+
+        {consolidatorFiles.length > 0 && (
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+              Export Consolidated Master Dataset ({consolidatorFiles.reduce((acc, curr) => acc + curr.submissions.length, 0)} Total Raw Ingested Records):
+            </h4>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button className="btn btn-primary" onClick={() => handleExportConsolidatedMaster('xlsx')}>
+                <FileSpreadsheet size={16} />
+                <span>Export Master Excel (.xlsx)</span>
+              </button>
+              <button className="btn btn-secondary" onClick={() => handleExportConsolidatedMaster('csv')}>
+                <Download size={16} />
+                <span>Export Master CSV (.csv)</span>
+              </button>
+              <button className="btn btn-outline" onClick={() => handleExportConsolidatedMaster('formdata')}>
+                <Package size={16} />
+                <span>Export Master Response Package (.formdata)</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Pipelines Toolbar Row */}
-      <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        {/* Import Package Card */}
+      {/* Package Transfer & Storage Center */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+        {/* Direct Package Importer */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <Upload size={22} color="var(--primary)" />
@@ -294,7 +267,7 @@ export const DataConsolidator: React.FC = () => {
           </div>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            Directly load <code>.formsoffline</code>, <code>.formdata</code>, or <code>.formbackup</code> package files into your local browser storage.
+            Directly load <code>.zip</code>, <code>.formsoffline</code>, <code>.formdata</code>, or <code>.formbackup</code> package files into your local browser storage.
           </p>
 
           <label
@@ -310,7 +283,7 @@ export const DataConsolidator: React.FC = () => {
           >
             <FileText size={28} color="var(--text-muted)" style={{ marginBottom: '0.3rem' }} />
             <span style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem' }}>Select File to Import</span>
-            <input type="file" accept=".json,.formsoffline,.formdata,.formbackup" onChange={handleFileUpload} style={{ display: 'none' }} />
+            <input type="file" accept=".zip,.json,.formsoffline,.formdata,.formbackup" onChange={handleFileUpload} style={{ display: 'none' }} />
           </label>
 
           {importStatus && (
@@ -331,24 +304,23 @@ export const DataConsolidator: React.FC = () => {
         {/* Form & Response Package Exporter */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <Share2 size={22} color="var(--accent-purple)" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Package Exporter</h2>
+            <Share2 size={22} color="var(--primary)" />
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Export Form Package</h2>
           </div>
 
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.8rem' }}>
-            Export form templates (<code>.formsoffline</code>) or response packages (<code>.formdata</code>) for offline sharing.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            Share a form template schema or export collected records for transport to another machine.
           </p>
 
           {templates.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
               <select
                 value={selectedTemplateForShare?.id || ''}
                 onChange={(e) => {
-                  const t = templates.find((item) => item.id === e.target.value);
+                  const t = templates.find((tpl) => tpl.id === e.target.value);
                   if (t) setSelectedTemplateForShare(t);
                 }}
-                aria-label="Select form template for package export"
-                style={{ width: '100%' }}
+                style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem' }}
               >
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -364,7 +336,7 @@ export const DataConsolidator: React.FC = () => {
                 </button>
 
                 <button className="btn btn-secondary" onClick={handleExportFormDataPackage} style={{ fontSize: '0.8rem', justifyContent: 'center' }}>
-                  <Package size={14} color="var(--primary)" />
+                  <Package size={14} />
                   <span>Records (.formdata)</span>
                 </button>
               </div>
@@ -378,17 +350,24 @@ export const DataConsolidator: React.FC = () => {
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <Database size={22} color="var(--accent-green)" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Database Backup</h2>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Full Database Backup</h2>
           </div>
 
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            Export a full 100% offline snapshot of all templates, records, and provenance history into a single <code>.formbackup</code> package.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.85rem' }}>
+            Export a full 100% offline snapshot of all templates, records, attachments, and provenance history.
           </p>
 
-          <button className="btn btn-secondary" onClick={handleExportFullBackup} style={{ width: '100%', justifyContent: 'center', padding: '0.6rem' }}>
-            <Download size={16} />
-            <span>Export Full Database Backup</span>
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button className="btn btn-primary" onClick={handleExportFullBackupArchive} style={{ width: '100%', justifyContent: 'center', padding: '0.55rem', fontSize: '0.84rem' }}>
+              <Archive size={16} />
+              <span>Full Backup ZIP (JSON + Files + Excel)</span>
+            </button>
+
+            <button className="btn btn-secondary btn-sm" onClick={handleExportFullBackup} style={{ width: '100%', justifyContent: 'center', padding: '0.45rem', fontSize: '0.78rem' }}>
+              <Download size={14} />
+              <span>Database Snapshot (.formbackup JSON)</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

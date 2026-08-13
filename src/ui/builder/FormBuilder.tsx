@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw, Upload, Camera } from 'lucide-react';
+import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw, Upload, Camera, Check } from 'lucide-react';
 import { FormField, FormSection, FormTemplate, FieldType, FieldOption, FormTemplateSettings, UserProfile, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { generateTemplateFingerprint } from '../../core/fingerprint/templateHasher';
@@ -698,37 +698,83 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
         </div>
 
         <div className="builder-toolbar-actions">
-          <LongPressTooltip label="Reorder Sections">
-            <button className="btn btn-outline" onClick={() => setIsSectionReorderOpen(true)} title="Reorder Sections">
-              <Move size={18} />
-              <span>Reorder Sections</span>
-            </button>
-          </LongPressTooltip>
+          <div className="btn-group-compact">
+            <LongPressTooltip label="Reorder Sections">
+              <button
+                type="button"
+                className="btn-compact"
+                onClick={() => {
+                  (document.activeElement as HTMLElement)?.blur();
+                  setIsSectionReorderOpen(true);
+                }}
+                title="Reorder Sections"
+                aria-label="Reorder Sections"
+              >
+                <Move size={14} />
+                <span className="btn-text-responsive">Reorder</span>
+              </button>
+            </LongPressTooltip>
 
-          <LongPressTooltip label="Reset Canvas">
-            <button className="btn btn-outline" onClick={() => setIsResetModalOpen(true)} title="Clear canvas and start fresh">
-              <RotateCcw size={18} color="var(--accent-amber)" />
-              <span>Reset</span>
-            </button>
-          </LongPressTooltip>
+            <LongPressTooltip label="Reset Canvas">
+              <button
+                type="button"
+                className="btn-compact"
+                onClick={() => {
+                  (document.activeElement as HTMLElement)?.blur();
+                  setIsResetModalOpen(true);
+                }}
+                title="Clear canvas and start fresh"
+                aria-label="Reset Canvas"
+              >
+                <RotateCcw size={14} color="var(--accent-amber)" />
+                <span className="btn-text-responsive">Reset</span>
+              </button>
+            </LongPressTooltip>
 
-          <LongPressTooltip label="Form Settings">
-            <button className="btn btn-outline" onClick={() => setIsSettingsOpen(true)} title="Form Settings">
-              <Settings size={18} />
-              <span>Settings</span>
-            </button>
-          </LongPressTooltip>
+            <LongPressTooltip label="Form Settings">
+              <button
+                type="button"
+                className="btn-compact"
+                onClick={() => {
+                  (document.activeElement as HTMLElement)?.blur();
+                  setIsSettingsOpen(true);
+                }}
+                title="Form Settings"
+                aria-label="Form Settings"
+              >
+                <Settings size={14} />
+                <span className="btn-text-responsive">Settings</span>
+              </button>
+            </LongPressTooltip>
 
-          <LongPressTooltip label={isPreview ? 'Back to Editor' : 'Preview Form'}>
-            <button className="btn btn-secondary" onClick={() => { setIsPreview(!isPreview); setPreviewSectionIndex(0); }}>
-              <Eye size={18} />
-              <span>{isPreview ? 'Back to Editor' : 'Preview Form'}</span>
-            </button>
-          </LongPressTooltip>
+            <LongPressTooltip label={isPreview ? 'Back to Editor' : 'Preview Form'}>
+              <button
+                type="button"
+                className="btn-compact"
+                onClick={() => {
+                  (document.activeElement as HTMLElement)?.blur();
+                  setIsPreview(!isPreview);
+                  setPreviewSectionIndex(0);
+                }}
+                title={isPreview ? 'Back to Editor' : 'Preview Form'}
+                aria-label={isPreview ? 'Back to Editor' : 'Preview Form'}
+              >
+                <Eye size={14} />
+                <span className="btn-text-responsive">{isPreview ? 'Edit' : 'Preview'}</span>
+              </button>
+            </LongPressTooltip>
+          </div>
 
           <LongPressTooltip label="Save Template">
-            <button className="btn btn-primary" onClick={() => setIsSaveModalOpen(true)}>
-              <Save size={18} />
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                (document.activeElement as HTMLElement)?.blur();
+                setIsSaveModalOpen(true);
+              }}
+              style={{ height: '34px', padding: '0.35rem 0.75rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <Save size={15} />
               <span>Save Template</span>
             </button>
           </LongPressTooltip>
@@ -881,12 +927,32 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
       {/* Section-by-Section Progression Preview Mode */}
       {isPreview ? (
-        <div className="card">
-          {/* Header Card */}
-          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{title}</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>{description}</p>
+        <div>
+          {/* Top Dedicated Preview Control Bar (Separate Row) */}
+          <div className="card" style={{ padding: '0.65rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', borderLeft: '4px solid var(--accent-purple)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="badge badge-purple" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>Preview Mode</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Testing form respondent flow</span>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => { setIsPreview(false); setPreviewSectionIndex(0); }}
+              title="Return to form editor canvas"
+              style={{ height: '34px', padding: '0.35rem 0.8rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
+            >
+              <RotateCcw size={14} />
+              <span>Go Back to Editor</span>
+            </button>
           </div>
+
+          <div className="card">
+            {/* Full-Width Form Header Card */}
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0 0 0.4rem 0' }}>{title}</h2>
+              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.92rem' }}>{description || 'No description provided.'}</p>
+            </div>
 
           {/* Section Progress Bar */}
           {settings.showProgressBar && (
@@ -1021,20 +1087,35 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
           )}
 
           {/* Section Navigation Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
-            <button
-              className="btn btn-secondary"
-              disabled={previewSectionIndex === 0}
-              onClick={() => setPreviewSectionIndex(previewSectionIndex - 1)}
-            >
-              Previous
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                disabled={previewSectionIndex === 0}
+                onClick={() => setPreviewSectionIndex(previewSectionIndex - 1)}
+                style={{ height: '34px' }}
+              >
+                Previous
+              </button>
 
-            <button className="btn btn-primary" onClick={handlePreviewNextSection}>
-              {previewSectionIndex === sections.length - 1 ? 'Submit' : 'Next Section'}
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => { setIsPreview(false); setPreviewSectionIndex(0); }}
+                style={{ height: '34px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                title="Return to form editor canvas"
+              >
+                <RotateCcw size={13} />
+                <span>Exit Preview</span>
+              </button>
+            </div>
+
+            <button className="btn btn-primary btn-sm" onClick={handlePreviewNextSection} style={{ height: '34px' }}>
+              {previewSectionIndex === sections.length - 1 ? 'Submit (Preview)' : 'Next Section'}
             </button>
           </div>
         </div>
+      </div>
       ) : (
         <div className="builder-layout-grid" ref={builderCanvasRef}>
           <div>
@@ -1107,9 +1188,14 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                   {/* Section Card Header */}
                   <div
                     className="card"
+                    onClick={() => {
+                      setActiveSectionId(sec.id);
+                      setActiveFieldId(null);
+                    }}
                     style={{
                       borderLeft: isSecActive ? '4px solid var(--accent-blue)' : '1px solid var(--border-color)',
-                      marginBottom: '1rem'
+                      marginBottom: '1rem',
+                      cursor: 'pointer'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -1117,32 +1203,30 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         Section {sIdx + 1} of {sections.length}
                       </span>
 
-                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <button
-                          className="btn btn-outline"
+                          className="btn btn-outline btn-icon-square"
                           disabled={sIdx === 0}
                           onClick={(e) => { e.stopPropagation(); moveSection(sIdx, 'up'); }}
                           title="Move Section Up"
                           aria-label="Move Section Up"
-                          style={{ padding: '0.3rem' }}
                         >
                           <ArrowUp size={14} />
                         </button>
                         <button
-                          className="btn btn-outline"
+                          className="btn btn-outline btn-icon-square"
                           disabled={sIdx === sections.length - 1}
                           onClick={(e) => { e.stopPropagation(); moveSection(sIdx, 'down'); }}
                           title="Move Section Down"
                           aria-label="Move Section Down"
-                          style={{ padding: '0.3rem' }}
                         >
                           <ArrowDown size={14} />
                         </button>
                         {sections.length > 1 && (
                           <button
-                            className="btn btn-outline"
+                            className="btn btn-outline btn-icon-square"
                             onClick={(e) => { e.stopPropagation(); removeSection(sec.id); }}
-                            style={{ color: 'var(--accent-rose)', padding: '0.3rem' }}
+                            style={{ color: 'var(--accent-rose)' }}
                             title="Delete Section"
                             aria-label="Delete Section"
                           >
@@ -1262,26 +1346,26 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                               </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <button
-                                className="btn btn-outline"
+                                className="btn btn-outline btn-icon-square"
                                 disabled={fIdx === 0}
                                 onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'up'); }}
                                 title="Move Up within Section"
-                                style={{ padding: '0.2rem 0.4rem' }}
+                                aria-label="Move Question Up"
                               >
                                 <ArrowUp size={14} />
                               </button>
                               <button
-                                className="btn btn-outline"
+                                className="btn btn-outline btn-icon-square"
                                 disabled={fIdx === sec.fields.length - 1}
                                 onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'down'); }}
                                 title="Move Down within Section"
-                                style={{ padding: '0.2rem 0.4rem' }}
+                                aria-label="Move Question Down"
                               >
                                 <ArrowDown size={14} />
                               </button>
-                              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>Click to Edit</span>
+                              <span className="hide-on-mobile" style={{ fontSize: '0.8rem', color: 'var(--primary)', marginLeft: '0.25rem' }}>Click to Edit</span>
                             </div>
                           </div>
                         );
@@ -1310,22 +1394,22 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         >
                           {/* Drag Handle Dots & Reorder controls */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                            <div style={{ display: 'flex', gap: '0.2rem' }}>
+                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                               <button
-                                className="btn btn-outline"
+                                className="btn btn-outline btn-icon-square"
                                 disabled={fIdx === 0}
                                 onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'up'); }}
                                 title="Move Question Up"
-                                style={{ padding: '0.2rem 0.4rem' }}
+                                aria-label="Move Question Up"
                               >
                                 <ArrowUp size={14} />
                               </button>
                               <button
-                                className="btn btn-outline"
+                                className="btn btn-outline btn-icon-square"
                                 disabled={fIdx === sec.fields.length - 1}
                                 onClick={(e) => { e.stopPropagation(); moveQuestion(sec.id, fIdx, 'down'); }}
                                 title="Move Question Down"
-                                style={{ padding: '0.2rem 0.4rem' }}
+                                aria-label="Move Question Down"
                               >
                                 <ArrowDown size={14} />
                               </button>
@@ -1437,43 +1521,63 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
                           {/* Customizable Linear Scale Configuration Panel */}
                           {f.type === 'linear_scale' && (
-                            <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem' }}>
-                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.6rem' }}>
-                                <label style={{ fontSize: '0.85rem' }}>Min Bound:</label>
-                                <select
-                                  value={f.validation?.min ?? 1}
-                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, min: Number(e.target.value) } })}
-                                >
-                                  <option value={0}>0</option>
-                                  <option value={1}>1</option>
-                                </select>
+                            <div style={{ background: 'var(--bg-input)', padding: '0.85rem', borderRadius: 'var(--radius-sm, 6px)', marginBottom: '1rem', border: '1px solid var(--border-color)', display: 'grid', gap: '0.75rem' }}>
+                              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Min Bound:</label>
+                                  <select
+                                    value={f.validation?.min ?? 1}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, min: Number(e.target.value) } })}
+                                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-sm, 6px)' }}
+                                  >
+                                    <option value={0}>0</option>
+                                    <option value={1}>1</option>
+                                  </select>
+                                </div>
 
-                                <label style={{ fontSize: '0.85rem' }}>Max Bound:</label>
-                                <select
-                                  value={f.validation?.max ?? 5}
-                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, max: Number(e.target.value) } })}
-                                >
-                                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                                    <option key={n} value={n}>{n}</option>
-                                  ))}
-                                </select>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>to</span>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Max Bound:</label>
+                                  <select
+                                    value={f.validation?.max ?? 5}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, max: Number(e.target.value) } })}
+                                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-sm, 6px)' }}
+                                  >
+                                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                      <option key={n} value={n}>{n}</option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
 
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                <input
-                                  type="text"
-                                  value={f.validation?.minLabel || ''}
-                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, minLabel: e.target.value } })}
-                                  placeholder="Low bound label (e.g. Disagree)"
-                                  style={{ fontSize: '0.85rem' }}
-                                />
-                                <input
-                                  type="text"
-                                  value={f.validation?.maxLabel || ''}
-                                  onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxLabel: e.target.value } })}
-                                  placeholder="High bound label (e.g. Agree)"
-                                  style={{ fontSize: '0.85rem' }}
-                                />
+                              {/* Low Bound & High Bound Labels in Clean Stacked Rows with Prefix Badges */}
+                              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', minWidth: '18px', textAlign: 'right' }}>
+                                    {f.validation?.min ?? 1}.
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={f.validation?.minLabel || ''}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, minLabel: e.target.value } })}
+                                    placeholder="Low bound label (optional, e.g. Disagree)"
+                                    style={{ flex: 1, minWidth: 0, width: '100%', fontSize: '0.85rem', padding: '0.4rem 0.6rem', boxSizing: 'border-box' }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', minWidth: '18px', textAlign: 'right' }}>
+                                    {f.validation?.max ?? 5}.
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={f.validation?.maxLabel || ''}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxLabel: e.target.value } })}
+                                    placeholder="High bound label (optional, e.g. Agree)"
+                                    style={{ flex: 1, minWidth: 0, width: '100%', fontSize: '0.85rem', padding: '0.4rem 0.6rem', boxSizing: 'border-box' }}
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1630,55 +1734,84 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
                           {/* Smart Options Authoring (Bulk Paste & Enter Key Creation) */}
                           {isOptionBased && (
-                            <div style={{ marginBottom: '1.25rem', display: 'grid', gap: '0.6rem', paddingLeft: '0.5rem' }}>
+                            <div style={{ marginBottom: '1.25rem', display: 'grid', gap: '0.5rem' }}>
                               {(f.options || []).map((opt, oIdx) => (
-                                <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                  {f.type === 'radio' && <Circle size={16} color="var(--text-muted)" />}
-                                  {f.type === 'checkbox' && <CheckSquare size={16} color="var(--text-muted)" />}
-                                  {f.type === 'select' && <List size={16} color="var(--text-muted)" />}
+                                <div
+                                  key={oIdx}
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.35rem',
+                                    padding: f.showSectionBranching && supportsBranching ? '0.4rem 0.5rem' : '0.1rem 0',
+                                    background: f.showSectionBranching && supportsBranching ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
+                                    borderRadius: 'var(--radius-sm, 6px)',
+                                    border: f.showSectionBranching && supportsBranching ? '1px solid rgba(99, 102, 241, 0.15)' : '1px solid transparent'
+                                  }}
+                                >
+                                  {/* Option Label Row */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+                                    {f.type === 'radio' && <Circle size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
+                                    {f.type === 'checkbox' && <CheckSquare size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
+                                    {f.type === 'select' && <List size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
 
-                                  <input
-                                    ref={(el) => { optionInputRefs.current[`${f.id}_${oIdx}`] = el; }}
-                                    type="text"
-                                    value={opt.label}
-                                    onChange={(e) => updateOption(sec.id, f.id, oIdx, { label: e.target.value })}
-                                    onPaste={(e) => handleOptionPaste(e, sec.id, f.id, oIdx)}
-                                    onKeyDown={(e) => handleOptionKeyDown(e, sec.id, f.id, oIdx)}
-                                    placeholder={`Option ${oIdx + 1} (Paste multiline list or press Enter for next)`}
-                                    style={{ flex: 1, fontSize: '0.9rem', padding: '0.4rem 0.6rem' }}
-                                  />
+                                    <input
+                                      ref={(el) => { optionInputRefs.current[`${f.id}_${oIdx}`] = el; }}
+                                      type="text"
+                                      value={opt.label}
+                                      onChange={(e) => updateOption(sec.id, f.id, oIdx, { label: e.target.value })}
+                                      onPaste={(e) => handleOptionPaste(e, sec.id, f.id, oIdx)}
+                                      onKeyDown={(e) => handleOptionKeyDown(e, sec.id, f.id, oIdx)}
+                                      placeholder={`Option ${oIdx + 1} (Paste multiline list or press Enter for next)`}
+                                      style={{ flex: 1, minWidth: 0, fontSize: '0.88rem', padding: '0.4rem 0.6rem', boxSizing: 'border-box' }}
+                                    />
+
+                                    {(f.options || []).length > 1 && (
+                                      <button
+                                        className="btn btn-outline btn-icon-square"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeOption(sec.id, f.id, oIdx);
+                                        }}
+                                        title="Remove Option"
+                                        aria-label="Remove Option"
+                                        style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px', padding: 0 }}
+                                      >
+                                        <X size={14} color="var(--text-muted)" />
+                                      </button>
+                                    )}
+                                  </div>
 
                                   {/* Option-Based Branching Dropdown ("Go to section based on answer") */}
                                   {f.showSectionBranching && supportsBranching && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                      <ArrowUpRight size={14} color="var(--primary)" />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: '1.5rem', width: 'calc(100% - 1.5rem)', boxSizing: 'border-box' }}>
+                                      <ArrowUpRight size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
                                       <select
                                         value={opt.targetSectionId || 'NEXT'}
                                         onChange={(e) => updateOption(sec.id, f.id, oIdx, { targetSectionId: e.target.value })}
-                                        style={{ fontSize: '0.8rem', padding: '0.3rem' }}
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                          width: '100%',
+                                          fontSize: '0.8rem',
+                                          padding: '0.35rem 0.5rem',
+                                          background: 'var(--bg-input)',
+                                          color: 'var(--text-primary)',
+                                          border: '1px solid var(--border-color)',
+                                          borderRadius: 'var(--radius-sm, 6px)',
+                                          cursor: 'pointer',
+                                          boxSizing: 'border-box'
+                                        }}
+                                        title="Go to section based on this answer"
                                       >
                                         <option value="NEXT">Continue to next section</option>
                                         {sections.map((targetSec, tsIdx) => (
                                           <option key={targetSec.id} value={targetSec.id}>
-                                            Go to section {tsIdx + 1} ({targetSec.title})
+                                            Go to section {tsIdx + 1} ({targetSec.title || 'Untitled'})
                                           </option>
                                         ))}
                                         <option value="SUBMIT">Submit form</option>
                                       </select>
                                     </div>
-                                  )}
-
-                                  {(f.options || []).length > 1 && (
-                                    <button
-                                      className="btn btn-outline"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeOption(sec.id, f.id, oIdx);
-                                      }}
-                                      style={{ padding: '0.2rem 0.4rem' }}
-                                    >
-                                      <X size={14} color="var(--text-muted)" />
-                                    </button>
                                   )}
                                 </div>
                               ))}
@@ -1700,56 +1833,81 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                           )}
 
                           {/* Bottom Card Action Toolbar */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                               <button
-                                className="btn btn-outline"
+                                className="btn btn-outline btn-icon-square"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   duplicateField(sec.id, f);
                                 }}
                                 title="Duplicate Question"
-                                style={{ padding: '0.4rem' }}
+                                aria-label="Duplicate Question"
                               >
-                                <Copy size={16} />
+                                <Copy size={15} />
                               </button>
 
                               <button
-                                className="btn btn-outline"
+                                className="btn btn-outline btn-icon-square"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeField(sec.id, f.id);
                                 }}
                                 title="Delete Question"
-                                style={{ padding: '0.4rem', color: 'var(--accent-rose)' }}
+                                aria-label="Delete Question"
+                                style={{ color: 'var(--accent-rose)' }}
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               {f.type !== 'title_block' && (
-                                <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}>
+                                <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', userSelect: 'none' }}>
                                   <input
                                     type="checkbox"
                                     checked={f.required || f.validation?.required || false}
                                     onChange={(e) => updateField(sec.id, f.id, { required: e.target.checked, validation: { ...f.validation, required: e.target.checked } })}
                                   />
-                                  Required
+                                  <span>Required</span>
                                 </label>
                               )}
+
+                              {/* Explicit Done / Collapse Button */}
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveFieldId(null);
+                                }}
+                                title="Done Editing - Collapse to compact view"
+                                aria-label="Collapse question"
+                                style={{
+                                  height: '32px',
+                                  padding: '0.2rem 0.65rem',
+                                  fontSize: '0.78rem',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem'
+                                }}
+                              >
+                                <Check size={13} />
+                                <span>Done</span>
+                              </button>
 
                               {/* 3-Dots Context Menu Dropdown */}
                               <div style={{ position: 'relative' }}>
                                 <button
-                                  className="btn btn-outline"
+                                  className="btn btn-outline btn-icon-square"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setOpenMenuFieldId(openMenuFieldId === f.id ? null : f.id);
                                   }}
-                                  style={{ padding: '0.4rem' }}
+                                  aria-label="Question Options"
                                 >
-                                  <MoreVertical size={16} />
+                                  <MoreVertical size={15} />
                                 </button>
 
                                 {openMenuFieldId === f.id && (

@@ -175,13 +175,15 @@
 }
 
 .dashboard-title {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
 .dashboard-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
+  line-height: 1.35;
 }
 
 .dashboard-toolbar {
@@ -346,18 +348,21 @@
   color: var(--text-muted);
 }
 
+.template-dropdown-menu,
 .template-menu-dropdown {
   position: absolute;
-  top: 2.75rem;
-  right: 1rem;
+  top: calc(100% + 4px);
+  right: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm, 6px);
   box-shadow: var(--shadow-lg);
-  z-index: 50;
-  min-width: 160px;
+  z-index: 100;
+  min-width: 220px;
   overflow: hidden;
   animation: fadeIn 0.12s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
 .template-menu-item {
@@ -365,13 +370,15 @@
   align-items: center;
   gap: 0.6rem;
   width: 100%;
-  padding: 0.6rem 0.85rem;
-  font-size: 0.85rem;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.82rem;
   background: transparent;
   color: var(--text-primary);
   text-align: left;
   border: none;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease;
 }
 
 .template-menu-item:hover {
@@ -735,25 +742,31 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
 }
 
 .builder-toolbar-title {
-  font-size: 1.6rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  margin: 0 0 0.15rem 0;
+  line-height: 1.25;
 }
 
 .builder-toolbar-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin: 0;
+  line-height: 1.35;
 }
 
 .builder-toolbar-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  align-items: center;
   flex-wrap: wrap;
 }
+
 
 /* Modal Inner Body & Flex Rows */
 .modal-body-grid {

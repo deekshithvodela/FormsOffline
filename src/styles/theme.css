@@ -64,6 +64,34 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
+.btn,
+.card {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+}
+
+.btn-icon-square {
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  flex-shrink: 0 !important;
 }
 
 /* Accessibility Focus Rings (WCAG 2.1 AA) */
@@ -347,6 +375,55 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-sm);
 }
 
+/* Compact Clean Button Cluster (Zero Awkward Outer Box Borders) */
+.btn-group-compact {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: 0.35rem;
+}
+
+.btn-compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  height: 34px;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-compact:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-compact:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--border-color);
+}
+
+@media (max-width: 640px) {
+  .btn-text-responsive {
+    display: none;
+  }
+}
+
+
+
 /* Form Builder Section Group Container */
 .builder-section-container {
   background: var(--bg-card);
@@ -520,6 +597,15 @@ html, body {
   .btn {
     min-height: 44px;
     padding: 0.6rem 0.9rem;
+  }
+
+  .btn.btn-sm,
+  .btn-sm,
+  .btn-compact {
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 0.28rem 0.65rem !important;
+    border-radius: 6px !important;
   }
 
   .modal-content {

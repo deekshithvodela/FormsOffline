@@ -32,7 +32,7 @@ describe('Git-like Record Merge Engine', () => {
       templateFingerprint: 'mock_fp',
       templateVersion: 1,
       status: 'completed',
-      data: { name: 'Deekshith', phone: '9999999999', notes: '' },
+      data: { name: 'Alice', phone: '555-0100', notes: '' },
       createdAt: '2026-08-11T12:00:00.000Z',
       updatedAt: '2026-08-11T12:00:00.000Z',
       deviceId: 'dev_1',
@@ -45,7 +45,7 @@ describe('Git-like Record Merge Engine', () => {
       templateFingerprint: 'mock_fp',
       templateVersion: 1,
       status: 'completed',
-      data: { name: 'Deekshith', phone: '', notes: 'Visited site at 2pm' },
+      data: { name: 'Alice', phone: '', notes: 'Visited site at 2pm' },
       createdAt: '2026-08-11T12:05:00.000Z',
       updatedAt: '2026-08-11T12:05:00.000Z',
       deviceId: 'dev_2',
@@ -56,8 +56,8 @@ describe('Git-like Record Merge Engine', () => {
 
     expect(result.hasConflicts).toBe(false);
     expect(result.conflicts.length).toBe(0);
-    expect(result.mergedSubmission.data.name).toBe('Deekshith');
-    expect(result.mergedSubmission.data.phone).toBe('9999999999');
+    expect(result.mergedSubmission.data.name).toBe('Alice');
+    expect(result.mergedSubmission.data.phone).toBe('555-0100');
     expect(result.mergedSubmission.data.notes).toBe('Visited site at 2pm');
   });
 
@@ -68,7 +68,7 @@ describe('Git-like Record Merge Engine', () => {
       templateFingerprint: 'mock_fp',
       templateVersion: 1,
       status: 'completed',
-      data: { name: 'Deekshith', phone: '1111111111' },
+      data: { name: 'Alice', phone: '555-0101' },
       createdAt: '2026-08-11T12:00:00.000Z',
       updatedAt: '2026-08-11T12:00:00.000Z',
       deviceId: 'dev_1',
@@ -81,7 +81,7 @@ describe('Git-like Record Merge Engine', () => {
       templateFingerprint: 'mock_fp',
       templateVersion: 1,
       status: 'completed',
-      data: { name: 'Deekshith', phone: '2222222222' },
+      data: { name: 'Alice', phone: '555-0102' },
       createdAt: '2026-08-11T12:05:00.000Z',
       updatedAt: '2026-08-11T12:05:00.000Z',
       deviceId: 'dev_2',
@@ -93,7 +93,7 @@ describe('Git-like Record Merge Engine', () => {
     expect(result.hasConflicts).toBe(true);
     expect(result.conflicts.length).toBe(1);
     expect(result.conflicts[0].fieldId).toBe('phone');
-    expect(result.conflicts[0].localValue).toBe('1111111111');
-    expect(result.conflicts[0].remoteValue).toBe('2222222222');
+    expect(result.conflicts[0].localValue).toBe('555-0101');
+    expect(result.conflicts[0].remoteValue).toBe('555-0102');
   });
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, ArrowRight, ArrowLeft, CheckCircle, Clock, AlertTriangle, Star, MapPin, Trash2, Folder, Database, FileText, Upload, Camera, Plus } from 'lucide-react';
+import { Save, ArrowRight, ArrowLeft, CheckCircle, Clock, AlertTriangle, Star, MapPin, Trash2, Folder, Database, FileText, Upload, Camera, Plus, Layers, Search } from 'lucide-react';
 import { FormSubmission, FormTemplate, UserProfile, FormField, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { getNextSectionId } from '../../core/branching/evaluator';
@@ -590,62 +590,110 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
 
   return (
     <div>
-      {/* Template Header Toolbar */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {onNavigateToDashboard && (
-            <button className="btn btn-outline" onClick={onNavigateToDashboard} title="Back to All Forms Dashboard">
-              <Folder size={18} color="var(--primary)" />
-              <span>All Forms</span>
-            </button>
-          )}
-
-          <button className="btn btn-outline" onClick={() => setIsGalleryOpen(true)}>
-            <span>Switch Form</span>
-          </button>
-
-          {selectedTemplate && (
-            <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Active Form</span>
-              <strong style={{ fontSize: '1.05rem', color: 'var(--primary)' }}>{selectedTemplate.title} (v{selectedTemplate.version})</strong>
-            </div>
-          )}
+      {/* Template Header Toolbar — 3 Structured Rows */}
+      <div className="card" style={{ padding: '0.75rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '1rem' }}>
+        {/* Row 1: Active Form Title with Ellipsis Truncation */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: '0.5rem' }}>
+          <div style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.4rem', fontWeight: 600 }}>Active Form:</span>
+            <strong style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
+              {selectedTemplate?.title || 'No Form Selected'}
+            </strong>
+            {selectedTemplate && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>
+                (v{selectedTemplate.version})
+              </span>
+            )}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Row 2: All Forms & Switch Form buttons with text + Search icon button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {onNavigateToDashboard && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={onNavigateToDashboard}
+                title="Back to All Forms Dashboard"
+                aria-label="All Forms Dashboard"
+                style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem' }}
+              >
+                <Folder size={14} color="var(--primary)" />
+                <span>All Forms</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => {
+                (document.activeElement as HTMLElement)?.blur();
+                setIsGalleryOpen(true);
+              }}
+              title="Switch to another form"
+              aria-label="Switch Form"
+              style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
+            >
+              <Layers size={14} color="var(--text-secondary)" />
+              <span>Switch Form</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-outline btn-sm btn-icon-square"
+            onClick={() => {
+              (document.activeElement as HTMLElement)?.blur();
+              setIsGalleryOpen(true);
+            }}
+            title="Search forms in gallery"
+            aria-label="Search Forms"
+          >
+            <Search size={14} color="var(--text-muted)" />
+          </button>
+        </div>
+
+        {/* Row 3: View Records in CMS with text + Compact Autosaved indication (Zero Layout Shift) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
           {selectedTemplate && onNavigateToCMS && (
             <button
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-sm"
               onClick={() => onNavigateToCMS(selectedTemplate)}
               title="View Dataset Records in CMS"
+              aria-label="View Dataset Records in CMS"
+              style={{ height: '32px', padding: '0.2rem 0.65rem', fontSize: '0.78rem', borderRadius: '6px' }}
             >
-              <Database size={16} />
+              <Database size={13} />
               <span>View Records in CMS</span>
             </button>
           )}
 
-          <div style={{ minWidth: '135px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Compact Autosave Status Container with Fixed Width */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '78px', flexShrink: 0 }}>
             {saveStatus === 'saved' && (
-              <span className="badge badge-green">
-                <CheckCircle size={14} style={{ marginRight: '0.3rem' }} /> Autosaved
+              <span className="badge badge-green" style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', height: '24px', display: 'inline-flex', alignItems: 'center' }}>
+                <CheckCircle size={11} style={{ marginRight: '0.2rem' }} /> Saved
               </span>
             )}
             {saveStatus === 'saving' && (
-              <span className="badge badge-purple">
-                <Clock size={14} style={{ marginRight: '0.3rem' }} /> Saving...
+              <span className="badge badge-purple" style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', height: '24px', display: 'inline-flex', alignItems: 'center' }}>
+                <Clock size={11} style={{ marginRight: '0.2rem' }} /> Saving
               </span>
             )}
             {saveStatus === 'dirty' && (
-              <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)' }}>
-                Unsaved Changes
-              </span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={saveDraft}
+                style={{ height: '26px', padding: '0.15rem 0.5rem', fontSize: '0.74rem' }}
+                title="Save Draft (Ctrl + S)"
+              >
+                <Save size={12} />
+                <span>Save</span>
+              </button>
             )}
           </div>
-
-          <button className="btn btn-outline" onClick={saveDraft} title="Ctrl + S">
-            <Save size={16} />
-            <span>Save Draft</span>
-          </button>
         </div>
       </div>
 

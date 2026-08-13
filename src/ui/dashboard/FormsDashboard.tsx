@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Folder, Search, FileText, Trash2, Layers, Hash, Plus, Download, Database, CheckCircle, Package, Copy, Upload, AlertCircle, Sparkles, MoreVertical } from 'lucide-react';
+import { Folder, Search, FileText, Trash2, Layers, Hash, Plus, Download, Database, CheckCircle, Package, Copy, Upload, AlertCircle, Sparkles, MoreVertical, Archive } from 'lucide-react';
 import { FormTemplate } from '../../core/types';
 import { db } from '../../db/database';
-import { exportFormTemplatePackage, exportFormDataPackage, downloadBlob } from '../../services/exportService';
+import { exportFormTemplatePackage, exportFormDataPackage, exportToZIPPackage, importPackageFile, downloadBlob } from '../../services/exportService';
 import { SmartFormImporterModal } from '../components/SmartFormImporterModal';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
@@ -69,46 +69,30 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
 
   useEffect(() => {
     loadTemplatesAndCounts();
+
+    const handleDocumentClick = () => {
+      setActiveMenuTemplateId(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
   }, []);
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setImportStatus(null);
     setErrorStatus(null);
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsed = JSON.parse(text);
-
-        if (parsed.format === 'FormsOffline_Template' && parsed.template) {
-          await db.templates.put(parsed.template);
-          setImportStatus(`Imported Template: "${parsed.template.title}"`);
-          loadTemplatesAndCounts();
-        } else if (parsed.format === 'FormsOffline_FormData' && parsed.template && parsed.submissions) {
-          await db.templates.put(parsed.template);
-          for (const sub of parsed.submissions) {
-            await db.submissions.put(sub);
-          }
-          setImportStatus(`Imported Template "${parsed.template.title}" with ${parsed.submissions.length} record(s)!`);
-          loadTemplatesAndCounts();
-        } else if (parsed.format === 'FormsOffline_DatabaseBackup' && parsed.database) {
-          for (const t of parsed.database.templates || []) await db.templates.put(t);
-          for (const s of parsed.database.submissions || []) await db.submissions.put(s);
-          setImportStatus(`Full Database Restore complete! Loaded templates & records.`);
-          loadTemplatesAndCounts();
-        } else {
-          setErrorStatus('Unrecognized file format or missing required payload data.');
-        }
-      } catch (err) {
-        setErrorStatus('Invalid JSON package file format.');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+    try {
+      const result = await importPackageFile(file);
+      setImportStatus(result.message);
+      loadTemplatesAndCounts();
+    } catch (err: any) {
+      setErrorStatus(err.message || 'Failed to import package file.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -136,12 +120,18 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
     downloadBlob(blob, `${t.title.replace(/\s+/g, '_')}_${submissions.length}_records.formdata`);
   };
 
+  const handleExportZIPPackage = async (t: FormTemplate) => {
+    const submissions = await db.submissions.where('templateId').equals(t.id).toArray();
+    const blob = await exportToZIPPackage(t, submissions);
+    downloadBlob(blob, `${t.title.replace(/\s+/g, '_')}_ZIP_Package.zip`);
+  };
+
   return (
-    <div className="dashboard-container" onClick={() => setActiveMenuTemplateId(null)}>
+    <div className="dashboard-container">
       {/* Top Banner Toolbar */}
-      <div className="card dashboard-header-card">
-        <div className="dashboard-title-group">
-          <Folder size={28} color="var(--primary)" />
+      <div className="card dashboard-header-card" style={{ padding: '0.85rem 1rem', gap: '0.75rem' }}>
+        <div className="dashboard-title-group" style={{ gap: '0.55rem' }}>
+          <Folder size={20} color="var(--primary)" />
           <div>
             <h1 className="dashboard-title">Forms Dashboard</h1>
             <span className="dashboard-subtitle">
@@ -150,64 +140,98 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
           </div>
         </div>
 
-        <div className="dashboard-actions-toolbar dashboard-toolbar">
-          <div className="search-input-wrapper">
-            <Search size={16} className="search-input-icon" />
-            <input
-              type="text"
-              placeholder="Search forms..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input-field"
-              aria-label="Search offline form templates"
-            />
+        <div className="dashboard-actions-toolbar dashboard-toolbar" style={{ width: '100%', gap: '0.5rem' }}>
+          {/* Single Row: Search Input + Compact Sort Dropdown */}
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', width: '100%' }}>
+            <div className="search-input-wrapper" style={{ flex: '1 1 0', minWidth: '90px' }}>
+              <Search size={14} className="search-input-icon" />
+              <input
+                type="text"
+                placeholder="Search forms..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input-field"
+                style={{ height: '34px', fontSize: '0.82rem', paddingLeft: '2.1rem' }}
+                aria-label="Search offline form templates"
+              />
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="dashboard-sort-select"
+              style={{
+                height: '34px',
+                fontSize: '0.78rem',
+                padding: '0.2rem 0.45rem',
+                flex: '0 0 auto',
+                maxWidth: '95px',
+                background: 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm, 6px)',
+                cursor: 'pointer'
+              }}
+              title="Sort forms list"
+              aria-label="Sort forms list"
+            >
+              <option value="date-desc">Newest</option>
+              <option value="date-asc">Oldest</option>
+              <option value="name-asc">A – Z</option>
+              <option value="name-desc">Z – A</option>
+            </select>
           </div>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="dashboard-sort-select"
-            title="Sort forms list"
-            aria-label="Sort forms list"
-          >
-            <option value="date-asc">Sort: Date Modified (Oldest First)</option>
-            <option value="date-desc">Sort: Date Modified (Newest First)</option>
-            <option value="name-asc">Sort: Title (A - Z)</option>
-            <option value="name-desc">Sort: Title (Z - A)</option>
-          </select>
+          {/* Action Buttons untouched */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', flexWrap: 'wrap' }}>
+            {/* Standalone Highlighted Feature: Import from Link */}
+            <button
+              className="btn-import-link"
+              onClick={() => {
+                (document.activeElement as HTMLElement)?.blur();
+                setIsLinkImporterOpen(true);
+              }}
+              title="Import Google Form or Microsoft Form response URL using AI Parser"
+              style={{ flex: '1 1 130px', justifyContent: 'center' }}
+            >
+              <Sparkles size={16} color="#ffffff" />
+              <span>Import from Link</span>
+            </button>
 
-          {/* Standalone Highlighted Feature: Import from Link */}
-          <button
-            className="btn-import-link"
-            onClick={() => setIsLinkImporterOpen(true)}
-            title="Import Google Form or Microsoft Form response URL using AI Parser"
-          >
-            <Sparkles size={16} color="#ffffff" />
-            <span>Import from Link</span>
-          </button>
+            {/* Standalone Import File Button */}
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => {
+                (document.activeElement as HTMLElement)?.blur();
+                fileInputRef.current?.click();
+              }}
+              title="Import .zip, .formdata, .formbackup, or .formtemplate offline backup package"
+              style={{ flex: '1 1 110px', justifyContent: 'center' }}
+            >
+              <Upload size={16} color="var(--primary)" />
+              <span>Import File</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip,.json,.formsoffline,.formdata,.formbackup"
+              onChange={handleImportFile}
+              style={{ display: 'none' }}
+              aria-label="Upload form template backup file"
+            />
 
-          {/* Standalone Import File Button */}
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => fileInputRef.current?.click()}
-            title="Import .formtemplate or .formdata offline backup file"
-          >
-            <Upload size={16} color="var(--primary)" />
-            <span>Import File</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,.formsoffline,.formdata,.formbackup"
-            onChange={handleImportFile}
-            style={{ display: 'none' }}
-            aria-label="Upload form template backup file"
-          />
-
-          <button className="btn btn-primary" onClick={() => onNavigate('builder')}>
-            <Plus size={16} />
-            <span>Create New Form</span>
-          </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                (document.activeElement as HTMLElement)?.blur();
+                onNavigate('builder');
+              }}
+              style={{ flex: '1 1 100%', justifyContent: 'center' }}
+            >
+              <Plus size={16} />
+              <span>Create New Form</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -247,29 +271,36 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
             return (
               <div
                 key={t.id}
-                className="template-card"
+                className="card template-card"
                 style={{ borderTop: '3px solid var(--primary)' }}
               >
                 <div>
                   <div className="template-card-header">
-                    <h3 className="template-card-title">
-                      {t.title}
-                    </h3>
+                    <div className="template-badge-group">
+                        <span className="badge badge-purple">v{t.version || '1.0'}</span>
+                        <span className="badge badge-blue">
+                          {count} Records
+                        </span>
+                        {/* Assuming e2eeEnabled could be part of settings object if it exists */}
+                        {t.settings?.e2eeEnabled && (
+                          <span className="badge badge-amber">E2EE</span>
+                        )}
+                    </div>
 
                     {/* Context Menu Toggle Button */}
-                    <div style={{ position: 'absolute', top: '1rem', right: '1rem' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                       <button
-                        className="btn-icon"
+                        className="btn btn-outline btn-sm"
                         onClick={() => setActiveMenuTemplateId(activeMenuTemplateId === t.id ? null : t.id)}
-                        style={{ padding: '0.4rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent' }}
-                        title="More Actions"
-                        aria-label="More Template Actions"
+                        style={{ padding: '0.2rem 0.4rem', height: '28px' }}
+                        title="Template actions"
+                        aria-label="Open template actions menu"
                       >
-                        <MoreVertical size={18} color="var(--text-secondary)" />
+                        <MoreVertical size={14} />
                       </button>
 
                       {activeMenuTemplateId === t.id && (
-                        <div className="template-menu-dropdown">
+                        <div className="template-dropdown-menu" onClick={(e) => e.stopPropagation()}>
                           <button
                             className="template-menu-item"
                             onClick={() => {
@@ -301,6 +332,16 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
                             <Package size={15} color="var(--accent-blue)" />
                             <span>Export Responses (.formdata)</span>
                           </button>
+                          <button
+                            className="template-menu-item"
+                            onClick={() => {
+                              setActiveMenuTemplateId(null);
+                              handleExportZIPPackage(t);
+                            }}
+                          >
+                            <Archive size={15} color="var(--accent-amber)" />
+                            <span>Export ZIP Package (Excel + Files)</span>
+                          </button>
                           <div style={{ borderTop: '1px solid var(--border-color)' }} />
                           <button
                             className="template-menu-item danger"
@@ -316,6 +357,10 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
                       )}
                     </div>
                   </div>
+
+                  <h3 className="template-card-title" style={{ marginTop: '0.5rem' }}>
+                    {t.title}
+                  </h3>
 
                   <p className="template-card-desc">
                     {t.description || 'No description provided.'}

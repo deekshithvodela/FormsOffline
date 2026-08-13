@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Search, Download, History, X, Database, Folder, Trash2, CheckSquare, Square, AlertTriangle, Plus, Package, Share2, ChevronDown, ChevronRight, ShieldCheck, Edit3, Star, Archive, FileText } from 'lucide-react';
+import { Search, Download, History, X, Database, Folder, Trash2, CheckSquare, Square, AlertTriangle, Plus, Package, Share2, ChevronDown, ChevronRight, ShieldCheck, Edit3, Star, Archive, FileText, Layers } from 'lucide-react';
 import { FormSubmission, FormTemplate, FormField, ProvenanceEntry } from '../../core/types';
 import { db } from '../../db/database';
 import { exportToCSV, exportToXLSX, exportToZIPPackage, exportFormDataPackage, exportFormTemplatePackage, downloadBlob } from '../../services/exportService';
@@ -30,6 +30,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [showTechnicalSignatures, setShowTechnicalSignatures] = useState(false);
   const [activeShareMenuId, setActiveShareMenuId] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [deleteSingleTarget, setDeleteSingleTarget] = useState<FormSubmission | null>(null);
@@ -60,6 +61,12 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
       setTemplates(tpls);
       setIsLoading(false);
     });
+
+    const handleDocClick = () => {
+      setActiveShareMenuId(null);
+    };
+    document.addEventListener('click', handleDocClick);
+    return () => document.removeEventListener('click', handleDocClick);
   }, []);
 
   useEffect(() => {
@@ -397,72 +404,157 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {onNavigateToDashboard && (
-            <button className="btn btn-outline" onClick={onNavigateToDashboard} title="Back to All Forms Dashboard">
-              <Folder size={18} color="var(--primary)" />
-              <span>All Forms</span>
-            </button>
-          )}
-
-          <button className="btn btn-outline" onClick={() => setIsGalleryOpen(true)}>
-            <span>Switch Form</span>
-          </button>
-
-          {selectedTemplate && (
-            <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Active Dataset</span>
-              <strong style={{ fontSize: '1.05rem', color: 'var(--primary)' }}>{selectedTemplate.title} ({filteredSubmissions.length} records)</strong>
-            </div>
-          )}
-
-          <div style={{ position: 'relative', marginLeft: '0.5rem' }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Search records..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '2.4rem', width: '180px' }}
-            />
+      {/* Toolbar — 3 Structured Rows */}
+      <div className="card" style={{ padding: '0.75rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '1rem' }}>
+        {/* Row 1: Active Dataset Title & Count with Ellipsis */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: '0.5rem' }}>
+          <div style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.4rem', fontWeight: 600 }}>Active Dataset:</span>
+            <strong style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
+              {selectedTemplate?.title || 'No Form Selected'}
+            </strong>
+            {selectedTemplate && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>
+                ({filteredSubmissions.length} records)
+              </span>
+            )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-          {selectedTemplate && onNavigateToEntry && (
-            <button
-              className="btn btn-primary"
-              onClick={() => onNavigateToEntry(selectedTemplate)}
-              title="Enter New Record for this Form"
-            >
-              <Plus size={16} />
-              <span>Enter New Record</span>
-            </button>
-          )}
+        {/* Row 2: All Forms & Switch Form buttons with text + Search icon button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {onNavigateToDashboard && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={onNavigateToDashboard}
+                title="Back to All Forms Dashboard"
+                aria-label="All Forms Dashboard"
+                style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
+              >
+                <Folder size={14} color="var(--primary)" />
+                <span>All Forms</span>
+              </button>
+            )}
 
-          {selectedRowIds.size > 0 && (
             <button
-              className="btn btn-primary"
-              onClick={() => setIsBulkDeleteModalOpen(true)}
-              style={{ backgroundColor: 'var(--accent-rose)', borderColor: 'var(--accent-rose)' }}
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => {
+                (document.activeElement as HTMLElement)?.blur();
+                setIsGalleryOpen(true);
+              }}
+              title="Switch to another form dataset"
+              aria-label="Switch Form Dataset"
+              style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
             >
-              <Trash2 size={16} />
-              <span>Delete ({selectedRowIds.size})</span>
+              <Layers size={14} color="var(--text-secondary)" />
+              <span>Switch Form</span>
             </button>
-          )}
+          </div>
+
+          <button
+            type="button"
+            className={`btn btn-outline btn-sm btn-icon-square ${isSearchOpen || searchQuery ? 'active' : ''}`}
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            title="Search dataset records"
+            aria-label="Search Records"
+            style={{
+              borderColor: (isSearchOpen || searchQuery) ? 'var(--primary)' : 'var(--border-color)',
+              background: (isSearchOpen || searchQuery) ? 'var(--primary-light)' : 'var(--bg-input)'
+            }}
+          >
+            <Search size={14} color={(isSearchOpen || searchQuery) ? 'var(--primary)' : 'var(--text-muted)'} />
+          </button>
+        </div>
+
+        {/* Collapsible Search Input Row */}
+        {(isSearchOpen || searchQuery) && (
+          <div style={{ position: 'relative', width: '100%', animation: 'fadeIn 0.15s ease-out' }}>
+            <Search size={13} color="var(--text-muted)" style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search records by ID, status, or values..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                paddingLeft: '1.9rem',
+                paddingRight: '2rem',
+                height: '32px',
+                fontSize: '0.82rem',
+                width: '100%',
+                boxSizing: 'border-box',
+                borderRadius: '6px'
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '0.5rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Row 3: Action Buttons (New Record + Export Dropdown + Bulk Delete) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {selectedTemplate && onNavigateToEntry && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => onNavigateToEntry(selectedTemplate)}
+                title="Enter New Record for this Form"
+                style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
+              >
+                <Plus size={14} />
+                <span>Enter New Record</span>
+              </button>
+            )}
+
+            {selectedRowIds.size > 0 && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  (document.activeElement as HTMLElement)?.blur();
+                  setIsBulkDeleteModalOpen(true);
+                }}
+                style={{ backgroundColor: 'var(--accent-rose)', borderColor: 'var(--accent-rose)', height: '32px', padding: '0.25rem 0.6rem', fontSize: '0.8rem', borderRadius: '6px' }}
+              >
+                <Trash2 size={13} />
+                <span>Delete ({selectedRowIds.size})</span>
+              </button>
+            )}
+          </div>
 
           {/* Unified Share / Export Dropdown Menu */}
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
             <button
-              className="btn btn-primary"
+              className="btn btn-outline btn-sm"
               onClick={() => setActiveShareMenuId(activeShareMenuId === 'cms_export' ? null : 'cms_export')}
-              style={{ fontSize: '0.85rem' }}
+              style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderRadius: '6px' }}
+              title="Export Dataset Records"
             >
-              <Share2 size={16} />
-              <span>Share / Export</span>
-              <ChevronDown size={14} />
+              <Share2 size={13} />
+              <span>Export Data</span>
+              <ChevronDown size={12} />
             </button>
 
             {activeShareMenuId === 'cms_export' && (
@@ -628,31 +720,34 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
                     {renderCellContent(f, sub.data[f.id], sub)}
                   </div>
                 ))}
-                <div style={{ width: '140px', padding: '0 1rem', flexShrink: 0, display: 'flex', gap: '0.3rem' }}>
+                <div style={{ width: '140px', padding: '0 0.75rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <button
-                    className="btn btn-outline"
-                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', color: 'var(--primary)' }}
+                    className="btn btn-outline btn-icon-square"
+                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px', padding: 0, borderRadius: '6px', color: 'var(--primary)' }}
                     onClick={() => setEditingSubmissionTarget(sub)}
                     title="Edit Submission Record"
+                    aria-label="Edit Submission Record"
                   >
                     <Edit3 size={14} />
                   </button>
                   <button
-                    className="btn btn-outline"
-                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                    className="btn btn-outline btn-icon-square"
+                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px', padding: 0, borderRadius: '6px' }}
                     onClick={() => {
                       setSelectedSubmission(sub);
                       setIsProvenanceDrawerOpen(true);
                     }}
                     title="View Record Details & Audit Trail"
+                    aria-label="View Record Details & Audit Trail"
                   >
                     <History size={14} />
                   </button>
                   <button
-                    className="btn btn-outline"
-                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', color: 'var(--accent-rose)' }}
+                    className="btn btn-outline btn-icon-square"
+                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px', padding: 0, borderRadius: '6px', color: 'var(--accent-rose)' }}
                     onClick={() => setDeleteSingleTarget(sub)}
                     title="Delete Record"
+                    aria-label="Delete Record"
                   >
                     <Trash2 size={14} />
                   </button>

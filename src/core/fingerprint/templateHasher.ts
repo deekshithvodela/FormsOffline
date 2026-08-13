@@ -2,7 +2,7 @@
  * Forms Offline — SHA-256 Fingerprint Generator
  * 
  * Computes canonical SHA-256 fingerprint for Form Templates and Record payloads.
- * Features automatic fallback for non-secure HTTP LAN contexts (e.g. http://192.168.29.187:8080)
+ * Features automatic fallback for non-secure HTTP LAN contexts (e.g. http://192.168.x.x:8080)
  * where WebCrypto `crypto.subtle` is restricted by browser security policies.
  */
 
@@ -96,7 +96,7 @@ export async function computeSHA256(text: string): Promise<string> {
     }
   }
 
-  // Fallback for HTTP LAN connections (e.g. http://192.168.29.187:8080)
+  // Fallback for HTTP LAN connections (e.g. http://192.168.x.x:8080)
   return pureJsSHA256(text);
 }
 

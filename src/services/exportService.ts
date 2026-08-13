@@ -268,10 +268,14 @@ export function exportFormTemplatePackage(template: FormTemplate): string {
   return JSON.stringify(pkg, null, 2);
 }
 
-export async function exportFullDatabaseBackup(): Promise<string> {
-  const templates = await db.templates.toArray();
-  const submissions = await db.submissions.toArray();
-  const userProfile = await db.userProfile.toArray();
+export async function exportFullDatabaseBackup(
+  customTemplates?: FormTemplate[],
+  customSubmissions?: FormSubmission[],
+  customProfiles?: any[]
+): Promise<string> {
+  const templates = customTemplates ?? (await db.templates.toArray());
+  const submissions = customSubmissions ?? (await db.submissions.toArray());
+  const userProfile = customProfiles ?? (await db.userProfile.toArray());
 
   const backupPkg = {
     format: 'FormsOffline_DatabaseBackup',
@@ -284,6 +288,207 @@ export async function exportFullDatabaseBackup(): Promise<string> {
     }
   };
   return JSON.stringify(backupPkg, null, 2);
+}
+
+/**
+ * Comprehensive Full System Backup Archive (.zip)
+ * Bundles:
+ * 1. `FormsOffline_DatabaseBackup.json` - Complete raw database dump with all templates, all submissions, and profiles.
+ * 2. `attachments/` folder containing all real extracted photos, signatures, and uploaded documents.
+ * 3. Individual `[FormTitle]_Responses.xlsx` spreadsheets for each form with response records and audit logs.
+ */
+export async function exportFullBackupArchive(
+  customTemplates?: FormTemplate[],
+  customSubmissions?: FormSubmission[],
+  customProfiles?: any[]
+): Promise<Blob> {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+
+  const templates = customTemplates ?? (await db.templates.toArray());
+  const submissions = customSubmissions ?? (await db.submissions.toArray());
+  const userProfile = customProfiles ?? (await db.userProfile.toArray());
+
+  // 1. Write the full database JSON manifest
+  const backupPkg = {
+    format: 'FormsOffline_DatabaseBackup',
+    version: '1.0.0',
+    exportedAt: new Date().toISOString(),
+    database: {
+      templates,
+      submissions,
+      userProfile
+    }
+  };
+  zip.file('FormsOffline_DatabaseBackup.json', JSON.stringify(backupPkg, null, 2));
+
+  // 2. Attachments folder for all forms
+  const attachmentsFolder = zip.folder('attachments');
+
+  for (const template of templates) {
+    const templateSubs = submissions.filter((s) => s.templateId === template.id);
+    const safeTitle = template.title.replace(/[^a-zA-Z0-9_-]/g, '_') || 'Form';
+
+    // Format submissions and save attachments
+    const formattedSubmissions: FormSubmission[] = templateSubs.map((sub, sIdx) => {
+      const newData = { ...sub.data };
+      const fields = template.sections.flatMap((s) => s.fields);
+      const recShortId = sub.id.split('_').pop() || sIdx;
+
+      fields.forEach((f) => {
+        const val = sub.data[f.id];
+        if (!val) return;
+
+        // Signature
+        if (f.type === 'signature' && typeof val === 'string' && val.startsWith('data:image')) {
+          const fileExt = val.includes('png') ? 'png' : 'jpg';
+          const fileName = `${safeTitle}_Rec${recShortId}_Signature_${f.id}.${fileExt}`;
+          const base64Data = val.replace(/^data:image\/\w+;base64,/, '');
+          attachmentsFolder?.file(fileName, base64Data, { base64: true });
+          newData[f.id] = `attachments/${fileName}`;
+        }
+
+        // Camera Photos
+        if (f.type === 'camera_photo' && val) {
+          const photosArray = Array.isArray(val) ? val : [val];
+          const relativePaths: string[] = [];
+
+          photosArray.forEach((photoObj: any, pIdx: number) => {
+            if (photoObj && typeof photoObj === 'object' && photoObj.data && photoObj.data.startsWith('data:image')) {
+              const rawExt = photoObj.type?.split('/')[1] || 'jpg';
+              const fileExt = rawExt === 'jpeg' ? 'jpg' : rawExt;
+              const fileName = `${safeTitle}_Rec${recShortId}_Photo_${f.id}_P${pIdx + 1}.${fileExt}`;
+              const base64Data = photoObj.data.replace(/^data:image\/\w+;base64,/, '');
+              attachmentsFolder?.file(fileName, base64Data, { base64: true });
+              relativePaths.push(`attachments/${fileName}`);
+            }
+          });
+
+          if (relativePaths.length > 0) {
+            newData[f.id] = relativePaths.join(', ');
+          }
+        }
+
+        // Uploaded Files
+        if (f.type === 'file_upload') {
+          const filesArray = Array.isArray(val) ? val : [val];
+          const relativePaths: string[] = [];
+
+          filesArray.forEach((fileObj: any, fIdx: number) => {
+            if (fileObj && typeof fileObj === 'object' && fileObj.data && fileObj.data.startsWith('data:')) {
+              const rawName = fileObj.name || `Upload_${fIdx + 1}.dat`;
+              const fileName = `${safeTitle}_Rec${recShortId}_${rawName}`;
+              const base64Data = fileObj.data.replace(/^data:[^;]+;base64,/, '');
+              attachmentsFolder?.file(fileName, base64Data, { base64: true });
+              relativePaths.push(`attachments/${fileName}`);
+            } else if (typeof fileObj === 'string' && fileObj.startsWith('data:')) {
+              const fileName = `${safeTitle}_Rec${recShortId}_Upload_F${f.id}_${fIdx + 1}.bin`;
+              const base64Data = fileObj.replace(/^data:[^;]+;base64,/, '');
+              attachmentsFolder?.file(fileName, base64Data, { base64: true });
+              relativePaths.push(`attachments/${fileName}`);
+            }
+          });
+
+          if (relativePaths.length > 0) {
+            newData[f.id] = relativePaths.join(', ');
+          }
+        }
+      });
+
+      return { ...sub, data: newData };
+    });
+
+    if (templateSubs.length > 0) {
+      try {
+        const xlsxBlob = await exportToXLSX(template, formattedSubmissions);
+        const xlsxArrayBuffer = await xlsxBlob.arrayBuffer();
+        zip.file(`${safeTitle}_Responses.xlsx`, xlsxArrayBuffer);
+      } catch (err) {
+        console.warn(`Failed to export Excel sheet for template ${template.title}:`, err);
+      }
+    }
+  }
+
+  return await zip.generateAsync({ type: 'blob' });
+}
+
+export interface ImportResult {
+  templatesCount: number;
+  submissionsCount: number;
+  message: string;
+}
+
+export async function importPackageFile(file: File): Promise<ImportResult> {
+  if (file.name.endsWith('.zip')) {
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(file);
+
+    // Look for FormsOffline_DatabaseBackup.json or .formbackup or .formdata
+    const backupJsonFile = Object.keys(zip.files).find(
+      (name) => !zip.files[name].dir && (name.includes('DatabaseBackup') || name.endsWith('.formbackup') || name.endsWith('.formdata') || name.endsWith('.json'))
+    );
+
+    if (backupJsonFile) {
+      const jsonText = await zip.files[backupJsonFile].async('string');
+      const parsed = JSON.parse(jsonText);
+      return await restoreParsedPackage(parsed);
+    }
+    throw new Error('No valid Forms Offline backup manifest found inside ZIP archive.');
+  }
+
+  const text = await file.text();
+  const parsed = JSON.parse(text);
+  return await restoreParsedPackage(parsed);
+}
+
+export async function restoreParsedPackage(parsed: any, customDb?: any): Promise<ImportResult> {
+  const targetDb = customDb ?? (typeof indexedDB !== 'undefined' ? db : null);
+
+  if (parsed.format === 'FormsOffline_Template' && parsed.template) {
+    if (targetDb) await targetDb.templates.put(parsed.template);
+    return {
+      templatesCount: 1,
+      submissionsCount: 0,
+      message: `Successfully imported Form Template: "${parsed.template.title}" (v${parsed.template.version})`
+    };
+  }
+
+  if (parsed.format === 'FormsOffline_FormData' && parsed.template && parsed.submissions) {
+    if (targetDb) {
+      await targetDb.templates.put(parsed.template);
+      for (const sub of parsed.submissions) {
+        await targetDb.submissions.put(sub);
+      }
+    }
+    return {
+      templatesCount: 1,
+      submissionsCount: parsed.submissions.length,
+      message: `Imported Template "${parsed.template.title}" with ${parsed.submissions.length} response record(s)!`
+    };
+  }
+
+  if (parsed.format === 'FormsOffline_DatabaseBackup' && parsed.database) {
+    const tCount = parsed.database.templates?.length || 0;
+    const sCount = parsed.database.submissions?.length || 0;
+    if (targetDb) {
+      for (const t of parsed.database.templates || []) {
+        await targetDb.templates.put(t);
+      }
+      for (const s of parsed.database.submissions || []) {
+        await targetDb.submissions.put(s);
+      }
+      for (const p of parsed.database.userProfile || []) {
+        await targetDb.userProfile.put(p);
+      }
+    }
+    return {
+      templatesCount: tCount,
+      submissionsCount: sCount,
+      message: `Full Database Restore complete! Restored ${tCount} template(s) and ${sCount} record(s).`
+    };
+  }
+
+  throw new Error('Unrecognized package format or missing required payload data.');
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
