@@ -4,6 +4,7 @@ import { FormTemplate } from '../../core/types';
 import { db } from '../../db/database';
 import { exportFormTemplatePackage, exportFormDataPackage, downloadBlob } from '../../services/exportService';
 import { SmartFormImporterModal } from '../components/SmartFormImporterModal';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface FormsDashboardProps {
   onNavigate: (tab: 'builder' | 'entry' | 'cms' | 'import', template?: FormTemplate) => void;
@@ -35,11 +36,15 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
       }
       return 0;
     });
+
   const [deleteTarget, setDeleteTarget] = useState<FormTemplate | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
   const [isLinkImporterOpen, setIsLinkImporterOpen] = useState(false);
   const [activeMenuTemplateId, setActiveMenuTemplateId] = useState<string | null>(null);
+
+  // Lock body scroll when delete confirmation dialog is open
+  useBodyScrollLock(!!deleteTarget);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -154,6 +159,7 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input-field"
+              aria-label="Search offline form templates"
             />
           </div>
 
@@ -162,6 +168,7 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
             onChange={(e) => setSortBy(e.target.value as any)}
             className="dashboard-sort-select"
             title="Sort forms list"
+            aria-label="Sort forms list"
           >
             <option value="date-asc">Sort: Date Modified (Oldest First)</option>
             <option value="date-desc">Sort: Date Modified (Newest First)</option>
@@ -194,6 +201,7 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
             accept=".json,.formsoffline,.formdata,.formbackup"
             onChange={handleImportFile}
             style={{ display: 'none' }}
+            aria-label="Upload form template backup file"
           />
 
           <button className="btn btn-primary" onClick={() => onNavigate('builder')}>

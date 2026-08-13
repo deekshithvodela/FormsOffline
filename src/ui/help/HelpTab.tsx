@@ -26,16 +26,16 @@ export const HelpTab: React.FC = () => {
       title: 'Quick Start, PWA Installation & Operator Setup',
       category: 'Getting Started',
       icon: <Sparkles size={20} color="var(--primary)" />,
-      summary: 'Learn how to install Forms Offline as a PWA, set up your operator alias, and manage dark mode.',
+      summary: 'Learn how to install Forms Offline as a standalone windowed PWA, set up your operator alias, and manage themes.',
       steps: [
         {
           title: '1. Accessing the Application',
-          description: 'Open Forms Offline in any modern web browser (Chrome, Edge, Firefox, Safari, or Brave) or launch the application directly from your desktop or home screen.'
+          description: 'Open Forms Offline in any modern web browser (Chrome, Edge, Firefox, Safari, Brave) or launch it directly from your desktop or home screen.'
         },
         {
-          title: '2. Installing as a Desktop / Mobile PWA',
-          description: 'On Chrome or Edge, click the Install icon (computer with down arrow) in the right side of the address bar. On mobile devices, tap browser Menu -> "Add to Home Screen". Once installed, Forms Offline launches instantly from your desktop or app drawer with 100% zero-network dependency!',
-          tip: 'Pro Tip: PWA installation caches all web assets locally so the app works seamlessly during total internet outages or in remote field locations.'
+          title: '2. Installing as a Standalone App (Zero-Internet PWA)',
+          description: 'Click the "Install App" button (downward arrow icon) in the top header bar, or use the browser address bar icon. On mobile/iOS Safari, tap Share -> "Add to Home Screen". Once installed, Forms Offline opens in a dedicated standalone window with 100% offline precaching and zero-internet startup!',
+          tip: 'Pro Tip: Workbox precaches all 41 application bundles locally, ensuring instant sub-second boot even in Airplane Mode or total network outages.'
         },
         {
           title: '3. Setting Up Your Operator Profile Alias',
@@ -58,7 +58,7 @@ export const HelpTab: React.FC = () => {
       steps: [
         {
           title: 'Option A: 1-Click Link Import (Recommended)',
-          description: 'In the Forms Dashboard toolbar, click "Import" -> "Import Google / MS Link" (Sparkles icon). Paste any public form URL (supports /viewform, /edit, /formResponse, or short URLs like forms.gle/...) and click "Convert & Create Offline Form".',
+          description: 'In the Forms Dashboard toolbar, click "Import" -> "Import from Link" (Sparkles icon). Paste any public form URL (supports /viewform, /edit, /formResponse, or short URLs like forms.gle/...) and click "Convert & Create Offline Form".',
           tip: 'The importer parses all form questions, section breaks (Page 1 of N), radio choices, checkbox lists, scale bounds, and text inputs automatically.'
         },
         {
@@ -91,7 +91,7 @@ export const HelpTab: React.FC = () => {
         },
         {
           title: '4. Exporting & Importing Template Packages',
-          description: 'Select "Export Template (.formsoffline)" from the "•••" menu to save a shareable template package. Anyone can import this file via "Import" -> "Import Template File" on another device.'
+          description: 'Select "Export Template (.formsoffline)" from the "•••" menu to save a shareable template package. Anyone can import this file via "Import File" on another device.'
         }
       ]
     },
@@ -108,16 +108,17 @@ export const HelpTab: React.FC = () => {
           description: 'Click "+ Add Section" at the bottom of the canvas to create section breaks. Click "Reorder Sections" in the top builder toolbar to drag and reorder sections with automatic "Section X of N" visual grouping.'
         },
         {
-          title: '2. Question Types & Widgets',
-          description: 'Forms Offline supports 14 question types: Text, Textarea, Number, Select Dropdown, Radio, Checkbox, Date, Time, Location/Region, Digital Signature Canvas, Linear Scale (0–10), Rating Stars, Image Cards, and Title Blocks.'
+          title: '2. 15 Advanced Question Widgets & Media Fields',
+          description: 'Forms Offline supports 15 question types: Text, Textarea, Number, Select Dropdown, Radio, Checkbox, Date, Time, Location/Region, Digital Signature Canvas, Physical Form Camera Photo Capture, File Upload (up to 1 GB), Linear Scale (0–10), Rating Stars, Image Cards, and Title Blocks.'
         },
         {
-          title: '3. Option-Based Logic Branching',
-          description: 'For Radio and Select questions, enable "Option Branching" in the card settings. Select a target section for specific answer choices (e.g., Choice A -> "Go to Section 3", Choice B -> "Submit Form").'
+          title: '3. Multi-Page Camera Photo Capture Widget',
+          description: 'Add a "Camera Photo (Physical Form)" question to capture physical paper forms or field evidence. Configure max photos (up to 20 pages) to capture both sides (Front/Back) or multi-page documents with automatic page labeling (Page 1 Front, Page 2 Back, Page 3+).',
+          tip: 'Desktop Hardware Switcher: On laptops and desktops, the camera modal lets you switch between built-in webcams, external USB document cameras, and overhead scanners!'
         },
         {
-          title: '4. Reset Canvas & Form Settings',
-          description: 'Click "Reset" in the builder toolbar to clear the canvas back to a clean state. Click "Settings" to toggle End-to-End Encryption (E2EE), Progress Bar, Draft Recovery, or custom Confirmation Messages.'
+          title: '4. 1 GB File Upload Support & Option Branching',
+          description: 'File upload fields support up to 1,000 MB (1 GB) per file and up to 20 files per field with specific MIME type filtering (PDF, Images, Word, Audio, Video). For Radio and Select questions, enable "Option Branching" to route respondents to specific sections or submission endpoints.'
         }
       ]
     },
@@ -127,46 +128,48 @@ export const HelpTab: React.FC = () => {
       title: 'Rapid Field Data Entry & Debounced Autosave',
       category: 'Data Entry',
       icon: <CheckCircle size={20} color="var(--accent-amber)" />,
-      summary: 'Capture responses with instant keyboard navigation, automatic draft recovery, and digital signature drawing.',
+      summary: 'Capture responses with live camera viewfinder, instant keyboard navigation, automatic draft recovery, and digital signatures.',
       steps: [
         {
           title: '1. Navigating Stepper Sections',
           description: 'Use the "Next Section" and "Previous" buttons or press Tab to fill out questions. Progress bar indicators reflect your completion percentage in real time.'
         },
         {
-          title: '2. Drawing Digital Signatures',
-          description: 'For signature questions, draw directly inside the touch-enabled canvas widget using a mouse, stylus, or finger. Click "Clear" to redraw if needed.'
+          title: '2. Multi-Page Camera Capture with Live Viewfinder',
+          description: 'Click "Take Photo" to launch the in-app WebRTC camera viewfinder. Switch between connected hardware cameras, click "Capture Snapshot", review the freeze-frame preview, and save. Click "Add Page (Back)" to capture additional pages.',
+          tip: 'In-App Lightbox: Click any captured photo thumbnail to open the full-screen Media Preview Modal with carousel navigation.'
         },
         {
-          title: '3. 300ms Debounced Autosave & Draft Recovery',
+          title: '3. Drawing Digital Signatures & 1 GB File Uploads',
+          description: 'Draw directly inside the touch-enabled canvas widget using a stylus, mouse, or finger. Upload large files up to 1 GB with clean filename ellipsis truncation and full-name tooltips.'
+        },
+        {
+          title: '4. 300ms Debounced Autosave & Draft Recovery',
           description: 'Every keystroke is saved automatically after 300ms of inactivity into local IndexedDB storage (sub_[templateId]_draft). If your browser or device restarts, your responses are automatically restored!',
           tip: 'Manual Save: You can also press Ctrl+S at any time to trigger an instant draft save.'
-        },
-        {
-          title: '4. Final Submission & Draft Purging',
-          description: 'Clicking "Submit Record" validates required fields, stamps operator provenance, saves the final completed submission, and automatically purges the temporary draft.'
         }
       ]
     },
     {
       id: 'cms',
       stepNum: 'Step 6',
-      title: 'Dataset CMS, Record Editing & Virtualized Spreadsheet',
+      title: 'Dataset CMS, In-App Document Viewer & Virtualized Spreadsheet',
       category: 'Dataset CMS',
       icon: <Database size={20} color="var(--accent-green)" />,
-      summary: 'Inspect captured records, edit submission values, audit cryptographic signatures, and manage spreadsheet data.',
+      summary: 'Inspect captured records, view multi-page PDFs, DOCX, and XLSX sheets in-app with zoom controls, edit submission values, and manage spreadsheet data.',
       steps: [
         {
           title: '1. High-Performance Virtualized Table Grid',
           description: 'The Dataset CMS uses virtualized rendering (@tanstack/react-virtual) to display thousands of records with zero lag. Headers and rows feature strict min-width protection so text never squishes or truncates.'
         },
         {
-          title: '2. Editing Submission Entries',
-          description: 'Click the "Edit Entry" button (Pencil icon) in any submission row to open the inline record editor. Modify responses and click "Save Changes". Edits are recorded silently in the cryptographic version history.'
+          title: '2. Native In-App PDF, DOCX & XLSX Document Viewer with Zoom',
+          description: 'Click any file attachment badge or photo thumbnail to open the Media Preview Lightbox Modal. PDF pages are rendered directly in-app on high-resolution canvases using PDF.js with 50%–300% zoom controls and pinch-to-zoom. Word documents (.docx) and Excel workbooks (.xlsx) are parsed in-memory with zero external tabs or downloads!',
+          tip: 'Dual Actions: Tap "Open Document" for instant in-app inspection, or "Download File" for safe same-origin local backup without browser security warnings.'
         },
         {
-          title: '3. Inspecting Record Provenance',
-          description: 'Click the "Record Detail & Audit Log" button (Info icon) to view full audit logs, ISO timestamps, operator attribution, and SHA-256 payload signatures.'
+          title: '3. Inline Record Editing & Provenance Audit',
+          description: 'Click the "Edit Entry" button (Pencil icon) on any row to modify responses, upload additional files, or retake photos. Edits are recorded silently in cryptographic version history with SHA-256 signatures.'
         },
         {
           title: '4. Single & Bulk Record Deletions',
@@ -180,15 +183,15 @@ export const HelpTab: React.FC = () => {
       title: 'Data Consolidator & Cross-Device Union Merging',
       category: 'Data Consolidation',
       icon: <Combine size={20} color="var(--primary)" />,
-      summary: 'Merge response packages (.formdata) collected across multiple offline devices without data loss or duplicates.',
+      summary: 'Merge response packages (.formdata) and ZIP packages (.zip) collected across multiple offline devices without data loss or duplicates.',
       steps: [
         {
           title: '1. Collecting Response Packages from Field Devices',
-          description: 'On field devices, export response packages by clicking "Share / Export" -> "Export Response Package (.formdata)" in Dataset CMS or Dashboard. Transfer files via USB, Bluetooth, or SD card.'
+          description: 'On field devices, export response packages by clicking "Share / Export" -> "Export Response Package (.formdata)" or "Export Portable ZIP (.zip)" in Dataset CMS or Dashboard. Transfer files via USB, Bluetooth, or SD card.'
         },
         {
           title: '2. Merging Packages into Master Storage',
-          description: 'Go to the "Data Consolidator" tab and upload the .formdata package files. The consolidation engine compares SHA-256 fingerprints, performs union deduplication, and merges new records seamlessly.'
+          description: 'Go to the "Data Consolidator" tab and upload the .formdata or .zip package files. The consolidation engine compares SHA-256 fingerprints, performs union deduplication, and merges new records seamlessly.'
         },
         {
           title: '3. Resolving Field Conflicts',
@@ -206,7 +209,7 @@ export const HelpTab: React.FC = () => {
       title: 'Data Export Formats, Consolidation Strategy & Multi-Sheet Excel',
       category: 'Exports & Reports',
       icon: <Download size={20} color="var(--accent-blue)" />,
-      summary: 'Export clean CSV files, multi-sheet Excel workbooks with version audit logs, raw JSON packages, and self-contained ZIP packages.',
+      summary: 'Export clean CSV files, 4-sheet Excel workbooks with codebooks and audit logs, raw JSON packages, and self-contained ZIP packages.',
       steps: [
         {
           title: '1. Strategy: Forms WITHOUT Files vs Forms WITH Files',
@@ -218,8 +221,8 @@ export const HelpTab: React.FC = () => {
           description: 'In Dataset CMS, click "Share / Export" -> "Export CSV (.csv)". Generates a standard CSV spreadsheet with "Submitted At (UTC)" strictly formatted as Column 1.'
         },
         {
-          title: '3. Multi-Sheet Excel Workbook (.xlsx)',
-          description: 'Click "Share / Export" -> "Export Excel (.xlsx)". Generates a 2-sheet Excel file: Sheet 1 ("Submissions") contains clean response data; Sheet 2 ("Version Audit Log") contains full audit trails of creation and edit timestamps.',
+          title: '3. 4-Sheet Comprehensive Excel Workbook (.xlsx)',
+          description: 'Click "Share / Export" -> "Export Excel (.xlsx)" to generate a 4-sheet Excel file: Sheet 1 ("Submissions") contains clean response data; Sheet 2 ("Field Codebook") contains variable metadata and types; Sheet 3 ("Summary Stats") contains response counts and rates; Sheet 4 ("Version Audit Log") contains full audit trails and diffs.',
           tip: 'Code Splitting: SheetJS is lazy-loaded on demand to ensure lightning-fast initial app load times under 200KB.'
         },
         {
@@ -234,15 +237,19 @@ export const HelpTab: React.FC = () => {
       title: 'Frequently Asked Questions (FAQ)',
       category: 'General FAQ',
       icon: <BookOpen size={20} color="var(--accent-rose)" />,
-      summary: 'Answers to common questions regarding offline storage, privacy, limits, and browser support.',
+      summary: 'Answers to common questions regarding offline storage, 1 GB limits, camera permissions, and privacy.',
       steps: [
         {
           title: 'Q: Is any data sent to external servers or cloud services?',
           description: 'No. Forms Offline operates 100% client-side with zero telemetry, zero analytics tracking, and zero cloud backends. All data stays strictly inside your local browser IndexedDB storage.'
         },
         {
-          title: 'Q: How many records can Forms Offline store?',
-          description: 'Forms Offline can store tens of thousands of submissions, limited only by your browser\'s local disk quota (typically 5GB to 50GB+ depending on your hard drive space).'
+          title: 'Q: How large can uploaded files be and how much data can be stored?',
+          description: 'Forms Offline supports up to 1 GB (1,000 MB) per file upload and 20 files per field. The app automatically requests persistent storage (navigator.storage.persist()), allowing 5 GB to 50 GB+ of disk storage depending on your available hard drive space.'
+        },
+        {
+          title: 'Q: How do I use external USB cameras or overhead document scanners?',
+          description: 'Connect your USB webcam or document scanner before clicking "Take Photo". In the in-app camera modal, use the camera dropdown selector to choose your external camera hardware.'
         },
         {
           title: 'Q: What happens if I clear my browser history / site data?',
@@ -318,6 +325,7 @@ export const HelpTab: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="help-search-input"
+            aria-label="Search help topics and documentation"
           />
         </div>
       </div>

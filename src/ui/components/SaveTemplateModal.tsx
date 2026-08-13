@@ -1,5 +1,6 @@
 import React from 'react';
 import { Lock, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface SaveTemplateModalProps {
   isOpen: boolean;
@@ -14,10 +15,12 @@ export const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({
   onConfirm,
   onCancel
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
+    <div className="modal-backdrop" onClick={onCancel} style={{ overscrollBehavior: 'contain', touchAction: 'none' }}>
       <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>

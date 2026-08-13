@@ -20,6 +20,7 @@ export type FieldType =
   | 'linear_scale'
   | 'rating'
   | 'file_upload'
+  | 'camera_photo'
   | 'title_block';
 
 export type AllowedFileType =
@@ -130,6 +131,10 @@ export interface ProvenanceEntry {
   timestamp: string; // ISO 8601 UTC
   action: 'created' | 'updated' | 'merged';
   authorAlias?: string;
+  changedFields?: string[];
+  previousValues?: Record<string, any>;
+  newValues?: Record<string, any>;
+  diffSummary?: string;
 }
 
 export interface FormSubmission {

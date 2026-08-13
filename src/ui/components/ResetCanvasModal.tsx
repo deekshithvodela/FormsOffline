@@ -1,5 +1,6 @@
 import React from 'react';
 import { RotateCcw, AlertTriangle, X } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface ResetCanvasModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ export const ResetCanvasModal: React.FC<ResetCanvasModalProps> = ({
   onConfirm,
   onCancel
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -27,8 +30,10 @@ export const ResetCanvasModal: React.FC<ResetCanvasModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem'
+        zIndex: 10500,
+        padding: '1rem',
+        overscrollBehavior: 'contain',
+        touchAction: 'none'
       }}
       onClick={onCancel}
     >

@@ -12,7 +12,13 @@ export async function createProvenanceEntry(
   deviceId: string,
   action: 'created' | 'updated' | 'merged',
   payload: any,
-  authorAlias?: string
+  authorAlias?: string,
+  diffDetails?: {
+    changedFields?: string[];
+    previousValues?: Record<string, any>;
+    newValues?: Record<string, any>;
+    diffSummary?: string;
+  }
 ): Promise<ProvenanceEntry> {
   const hash = await computeSHA256(canonicalizeJSON(payload));
   return {
@@ -21,7 +27,11 @@ export async function createProvenanceEntry(
     deviceId,
     timestamp: new Date().toISOString(),
     action,
-    authorAlias
+    authorAlias,
+    changedFields: diffDetails?.changedFields,
+    previousValues: diffDetails?.previousValues,
+    newValues: diffDetails?.newValues,
+    diffSummary: diffDetails?.diffSummary
   };
 }
 

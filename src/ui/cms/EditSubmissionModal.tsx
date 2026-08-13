@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit3, MapPin, Star, Upload, Trash2, FileText } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Save, Trash2, Upload, FileText, Camera, Edit3, MapPin, Star, Plus } from 'lucide-react';
 import { FormSubmission, FormTemplate, FormField, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { createProvenanceEntry } from '../../core/merge/mergeEngine';
+import { CameraCaptureModal } from '../components/CameraCaptureModal';
+import { MediaPreviewModal, MediaPreviewItem } from '../components/MediaPreviewModal';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface EditSubmissionModalProps {
   isOpen: boolean;
@@ -19,9 +22,16 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
   onClose,
   onSaved
 }) => {
+  useBodyScrollLock(isOpen);
+
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeCameraFieldId, setActiveCameraFieldId] = useState<string | null>(null);
+  const [retakePhotoIndex, setRetakePhotoIndex] = useState<number | null>(null);
+  const [previewMediaItem, setPreviewMediaItem] = useState<MediaPreviewItem | null>(null);
+  const [previewGallery, setPreviewGallery] = useState<MediaPreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState<number>(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -59,11 +69,13 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
     ctx.beginPath();
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    ctx.moveTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -74,13 +86,16 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-    ctx.strokeStyle = 'var(--primary)';
+    ctx.strokeStyle = '#6366f1';
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
+    ctx.lineJoin = 'round';
+    ctx.lineTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
     ctx.stroke();
   };
 
@@ -177,6 +192,77 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
     }
   };
 
+  const isMobileDevice = () =>
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse) and (max-width: 768px)').matches);
+
+  const handleTriggerCamera = (fieldId: string, targetIndex?: number | null) => {
+    setRetakePhotoIndex(targetIndex !== undefined ? targetIndex : null);
+    if (isMobileDevice()) {
+      const fileInput = document.getElementById(`edit_camera_input_${fieldId}`) as HTMLInputElement | null;
+      fileInput?.click();
+    } else {
+      setActiveCameraFieldId(fieldId);
+    }
+  };
+
+  const handleCameraModalCapture = (photo: { name: string; type: string; size: number; data: string }) => {
+    if (activeCameraFieldId) {
+      const currentVal = formData[activeCameraFieldId];
+      const currentPhotos: any[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal] : []);
+      const newPhoto = {
+        name: photo.name,
+        type: photo.type,
+        size: photo.size,
+        data: photo.data,
+        capturedAt: new Date().toISOString()
+      };
+
+      let updated: any[];
+      if (retakePhotoIndex !== null && retakePhotoIndex >= 0 && retakePhotoIndex < currentPhotos.length) {
+        updated = [...currentPhotos];
+        updated[retakePhotoIndex] = newPhoto;
+      } else {
+        updated = [...currentPhotos, newPhoto];
+      }
+
+      handleInputChange(activeCameraFieldId, updated);
+      setActiveCameraFieldId(null);
+      setRetakePhotoIndex(null);
+    }
+  };
+
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>, fieldId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const now = new Date();
+      const currentVal = formData[fieldId];
+      const currentPhotos: any[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal] : []);
+      const photoObj = {
+        name: file.name || `Photo_${now.toISOString().slice(0, 10)}.jpg`,
+        type: file.type || 'image/jpeg',
+        size: file.size,
+        data: evt.target?.result as string,
+        capturedAt: now.toISOString()
+      };
+
+      let updated: any[];
+      if (retakePhotoIndex !== null && retakePhotoIndex >= 0 && retakePhotoIndex < currentPhotos.length) {
+        updated = [...currentPhotos];
+        updated[retakePhotoIndex] = photoObj;
+      } else {
+        updated = [...currentPhotos, photoObj];
+      }
+
+      handleInputChange(fieldId, updated);
+      setRetakePhotoIndex(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     setErrorMsg(null);
@@ -187,8 +273,67 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
       const alias = activeProf?.alias || 'Operator 1';
       const device = activeProf?.deviceId || submission.deviceId || 'local_device';
 
-      // Generate new SHA-256 cryptographic provenance entry for this edit
-      const newEditProv = await createProvenanceEntry(device, 'updated', formData, alias);
+      // Compute field-level before/after diffs
+      const changedFields: string[] = [];
+      const previousValues: Record<string, any> = {};
+      const newValues: Record<string, any> = {};
+      const formatValueForDiff = (val: any, fieldType?: string): string => {
+        if (val === undefined || val === null || val === '') return '[empty]';
+        if (fieldType === 'signature' || (typeof val === 'string' && val.startsWith('data:image/'))) {
+          return '[Digital Signature]';
+        }
+        if (fieldType === 'camera_photo' || (Array.isArray(val) && val[0]?.data?.startsWith('data:image/'))) {
+          const count = Array.isArray(val) ? val.length : 1;
+          return `[${count} Camera Photo${count > 1 ? 's' : ''}]`;
+        }
+        if (fieldType === 'file_upload' || (Array.isArray(val) && val[0]?.name)) {
+          if (Array.isArray(val)) {
+            return `[${val.length} File(s): ${val.map((f: any) => f.name || 'file').slice(0, 3).join(', ')}${val.length > 3 ? '...' : ''}]`;
+          }
+          return `[File: ${val.name || 'attachment'}]`;
+        }
+        if (Array.isArray(val)) {
+          return val.join(', ');
+        }
+        if (typeof val === 'object') {
+          if (val.name) return `[File: ${val.name}]`;
+          return JSON.stringify(val);
+        }
+        const str = String(val);
+        if (str.startsWith('data:')) {
+          return '[Binary Attachment]';
+        }
+        return str.length > 80 ? `"${str.substring(0, 80)}..."` : `"${str}"`;
+      };
+
+      const diffSummaries: string[] = [];
+
+      allFields.forEach((f) => {
+        const oldVal = submission.data[f.id];
+        const newVal = formData[f.id];
+        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+          changedFields.push(f.label || f.id);
+          previousValues[f.label || f.id] = oldVal;
+          newValues[f.label || f.id] = newVal;
+          const oldDisplay = formatValueForDiff(oldVal, f.type);
+          const newDisplay = formatValueForDiff(newVal, f.type);
+          diffSummaries.push(`${f.label || f.id}: ${oldDisplay} → ${newDisplay}`);
+        }
+      });
+
+      // Generate new SHA-256 cryptographic provenance entry for this edit with full diffs
+      const newEditProv = await createProvenanceEntry(
+        device,
+        'updated',
+        formData,
+        alias,
+        {
+          changedFields,
+          previousValues,
+          newValues,
+          diffSummary: diffSummaries.join('; ')
+        }
+      );
       const updatedProvenance = [...(submission.provenance || []), newEditProv];
 
       const updatedRecord: FormSubmission = {
@@ -225,7 +370,9 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: '1rem'
+      padding: '1rem',
+      overscrollBehavior: 'contain',
+      touchAction: 'none'
     }}>
       <div className="card" style={{
         width: '640px',
@@ -462,7 +609,6 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
 
               {f.type === 'file_upload' && (
                 <div>
-                  {/* Current Uploaded Files */}
                   {(() => {
                     const currentFiles = Array.isArray(formData[f.id])
                       ? formData[f.id]
@@ -490,26 +636,30 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
                                 borderRadius: 'var(--radius-sm)'
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', flex: 1 }}>
-                                <FileText size={16} color="var(--primary)" />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                                <FileText size={16} color="var(--primary)" style={{ flexShrink: 0 }} />
                                 <a
                                   href={fileData}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download={fileName}
+                                  title={fileName}
                                   style={{
                                     fontSize: '0.85rem',
                                     color: 'var(--primary)',
                                     fontWeight: 500,
                                     textOverflow: 'ellipsis',
                                     overflow: 'hidden',
-                                    whiteSpace: 'nowrap'
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '220px',
+                                    display: 'inline-block',
+                                    verticalAlign: 'middle'
                                   }}
                                 >
                                   {fileName}
                                 </a>
                                 {fileSizeStr && (
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({fileSizeStr})</span>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>({fileSizeStr})</span>
                                 )}
                               </div>
 
@@ -517,8 +667,9 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
                                 type="button"
                                 className="btn btn-outline"
                                 onClick={() => removeUploadedFile(f.id, idx)}
-                                style={{ padding: '0.2rem 0.4rem', color: 'var(--accent-rose)', border: 'none' }}
+                                style={{ padding: '0.2rem 0.4rem', color: 'var(--accent-rose)', border: 'none', flexShrink: 0 }}
                                 title="Remove File"
+                                aria-label={`Remove file ${fileName}`}
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -529,26 +680,185 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
                     );
                   })()}
 
-                  {/* Upload New File Button */}
-                  <label
-                    className="btn btn-outline btn-sm"
-                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                  >
-                    <Upload size={14} color="var(--primary)" />
-                    <span>Upload / Add File</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <label
+                      htmlFor={`edit_file_upload_${f.id}`}
+                      className="btn btn-outline"
+                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                    >
+                      <Upload size={14} color="var(--primary)" />
+                      <span>Upload Additional File</span>
+                    </label>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Max {f.validation?.maxFileSizeMB || 10} MB (Limit: {f.validation?.maxFileCount || 1})
+                    </span>
                     <input
+                      id={`edit_file_upload_${f.id}`}
                       type="file"
                       accept={getAcceptString(f.validation?.allowedFileTypes)}
                       multiple={(f.validation?.maxFileCount || 1) > 1}
                       onChange={(e) => handleFileUpload(e, f)}
                       style={{ display: 'none' }}
                     />
-                  </label>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.75rem' }}>
-                    Max size: {f.validation?.maxFileSizeMB || 10} MB (Max files: {f.validation?.maxFileCount || 1})
-                  </span>
+                  </div>
                 </div>
               )}
+
+              {/* Camera Photo Capture Field Editor */}
+              {f.type === 'camera_photo' && (() => {
+                const currentVal = formData[f.id];
+                const currentPhotos: any[] = Array.isArray(currentVal) ? currentVal : (currentVal ? [currentVal] : []);
+                const maxPhotos = f.validation?.maxFileCount || 5;
+
+                return (
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handleCameraCapture(e, f.id)}
+                      style={{ display: 'none' }}
+                      id={`edit_camera_input_${f.id}`}
+                    />
+                    
+                    {currentPhotos.length === 0 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerCamera(f.id)}
+                          className="btn btn-primary"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}
+                        >
+                          <Camera size={16} />
+                          <span>Capture Form Photo</span>
+                        </button>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Attach physical form copy image (Limit: {maxPhotos} {maxPhotos === 1 ? 'photo' : 'photos / pages'})
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: '0.5rem' }}>
+                        {currentPhotos.map((photo, pIdx) => (
+                          <div
+                            key={pIdx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.85rem',
+                              background: 'var(--bg-card)',
+                              border: '1px solid var(--border-color)',
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: 'var(--radius-sm)',
+                              minWidth: 0,
+                              maxWidth: '100%'
+                            }}
+                          >
+                            {photo.data && (
+                              <img
+                                src={photo.data}
+                                alt={`Page ${pIdx + 1}`}
+                                style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)', cursor: 'pointer', flexShrink: 0 }}
+                                onClick={() => {
+                                  const gallery: MediaPreviewItem[] = currentPhotos.map((p, idx) => ({
+                                    title: `${f.label || 'Physical Form Photo'} — Page ${idx + 1}`,
+                                    fileName: p.name,
+                                    type: p.type,
+                                    size: p.size,
+                                    dataUrl: p.data,
+                                    capturedAt: p.capturedAt ? new Date(p.capturedAt).toLocaleString() : undefined
+                                  }));
+                                  setPreviewMediaItem(gallery[pIdx]);
+                                  setPreviewGallery(gallery);
+                                  setPreviewInitialIndex(pIdx);
+                                }}
+                                title="Click to view full photo in lightbox"
+                              />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                <span className="badge badge-purple" style={{ fontSize: '0.7rem', flexShrink: 0 }}>
+                                  {pIdx === 0 ? 'Page 1 (Front)' : pIdx === 1 ? 'Page 2 (Back)' : `Page ${pIdx + 1}`}
+                                </span>
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    fontSize: '0.84rem',
+                                    color: 'var(--text-primary)',
+                                    textOverflow: 'ellipsis',
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '220px',
+                                    display: 'inline-block',
+                                    verticalAlign: 'middle',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={photo.name || `Physical Form Photo Page ${pIdx + 1}`}
+                                  onClick={() => {
+                                    const gallery: MediaPreviewItem[] = currentPhotos.map((p, idx) => ({
+                                      title: `${f.label || 'Physical Form Photo'} — Page ${idx + 1}`,
+                                      fileName: p.name,
+                                      type: p.type,
+                                      size: p.size,
+                                      dataUrl: p.data,
+                                      capturedAt: p.capturedAt ? new Date(p.capturedAt).toLocaleString() : undefined
+                                    }));
+                                    setPreviewMediaItem(gallery[pIdx]);
+                                    setPreviewGallery(gallery);
+                                    setPreviewInitialIndex(pIdx);
+                                  }}
+                                >
+                                  {photo.name || `Physical Form Photo Page ${pIdx + 1}`}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {photo.size ? `${(photo.size / 1024).toFixed(1)} KB` : 'Attached'}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={() => handleTriggerCamera(f.id, pIdx)}
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                                title="Retake this page"
+                              >
+                                <Camera size={12} /> Retake
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={() => {
+                                  const updated = currentPhotos.filter((_, idx) => idx !== pIdx);
+                                  handleInputChange(f.id, updated.length > 0 ? updated : null);
+                                }}
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', color: 'var(--accent-rose)' }}
+                                title="Remove this page"
+                              >
+                                <Trash2 size={12} /> Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* + Add Another Page Button */}
+                        {currentPhotos.length < maxPhotos && (
+                          <div style={{ marginTop: '0.2rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleTriggerCamera(f.id, null)}
+                              className="btn btn-outline"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', padding: '0.35rem 0.7rem' }}
+                            >
+                              <Plus size={13} color="var(--primary)" />
+                              <span>Capture Another Page ({currentPhotos.length + 1} of {maxPhotos})</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>
@@ -576,6 +886,26 @@ export const EditSubmissionModal: React.FC<EditSubmissionModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Desktop Multi-Camera Live Viewfinder Modal */}
+      <CameraCaptureModal
+        isOpen={!!activeCameraFieldId}
+        onClose={() => setActiveCameraFieldId(null)}
+        onCapture={handleCameraModalCapture}
+        title="Capture Physical Form Photo"
+      />
+
+      {/* Universal Media Lightbox Preview Modal */}
+      <MediaPreviewModal
+        isOpen={!!previewMediaItem}
+        onClose={() => {
+          setPreviewMediaItem(null);
+          setPreviewGallery([]);
+        }}
+        item={previewMediaItem}
+        galleryItems={previewGallery}
+        initialIndex={previewInitialIndex}
+      />
     </div>
   );
 };

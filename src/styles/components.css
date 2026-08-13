@@ -920,3 +920,17 @@
   align-items: center;
   gap: 0.4rem;
 }
+
+/* ==========================================================================
+   9. Modal Scroll Lock & Backdrop Utilities
+   ========================================================================== */
+body.modal-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
+.modal-backdrop {
+  overscroll-behavior: contain !important;
+  touch-action: none !important;
+}

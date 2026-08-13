@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Check, X, HardDrive } from 'lucide-react';
 import { db } from '../../db/database';
 import { UserProfile } from '../../core/types';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface UserProfileModalProps {
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, onProfileUpdated }) => {
+  useBodyScrollLock(isOpen);
+
   const [alias, setAlias] = useState('');
   const [deviceId, setDeviceId] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -60,10 +63,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
       right: 0,
       bottom: 0,
       background: 'rgba(0,0,0,0.65)',
-      zIndex: 1000,
+      zIndex: 10500,
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      overscrollBehavior: 'contain',
+      touchAction: 'none'
     }}>
       <div className="card" style={{ width: '480px', maxWidth: '92vw', position: 'relative' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>

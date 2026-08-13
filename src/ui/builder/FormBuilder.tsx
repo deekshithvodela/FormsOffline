@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw, Upload } from 'lucide-react';
+import { Plus, Trash2, Save, Eye, Layers, Hash, Copy, GripVertical, Star, Circle, CheckSquare, List, X, MoreVertical, MapPin, Edit3, ArrowUpRight, Image, Type, ArrowUp, ArrowDown, Settings, Move, RotateCcw, Upload, Camera } from 'lucide-react';
 import { FormField, FormSection, FormTemplate, FieldType, FieldOption, FormTemplateSettings, UserProfile, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { generateTemplateFingerprint } from '../../core/fingerprint/templateHasher';
@@ -7,6 +7,7 @@ import { getNextSectionId } from '../../core/branching/evaluator';
 import { SaveTemplateModal } from '../components/SaveTemplateModal';
 import { ResetCanvasModal } from '../components/ResetCanvasModal';
 import { LongPressTooltip } from '../components/LongPressTooltip';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface FormBuilderProps {
   initialTemplate?: FormTemplate | null;
@@ -65,6 +66,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Lock body scroll when settings or section reorder modals are open
+  useBodyScrollLock(isSettingsOpen || isSectionReorderOpen);
 
   // Synchronize state whenever initialTemplate changes or when switching forms
   useEffect(() => {
@@ -640,8 +644,18 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
       };
 
       await db.templates.put(fullTemplate);
+
+      // Reset canvas state back to clean defaults for next form
+      const cleanState = getInitialFormState(null);
+      setTitle(cleanState.title);
+      setDescription(cleanState.description);
+      setSettings(cleanState.settings);
+      setSections(cleanState.sections);
+      setActiveSectionId(cleanState.activeSectionId);
+      setActiveFieldId(null);
+
       setIsSaveModalOpen(false);
-      setNotification(`Form template "${templateTitle}" locked & saved successfully!`);
+      setNotification(`Form template "${templateTitle}" locked & saved successfully! Canvas reset for next form.`);
       setTimeout(() => setNotification(null), 5000);
     } catch (err: any) {
       console.error('Failed to save template:', err);
@@ -1035,6 +1049,8 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                aria-label="Form Title"
+                placeholder="Form Title"
                 style={{
                   fontSize: '1.6rem',
                   fontWeight: 700,
@@ -1053,6 +1069,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Form description"
+                aria-label="Form Description"
                 style={{
                   width: '100%',
                   minWidth: 0,
@@ -1106,6 +1123,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                           disabled={sIdx === 0}
                           onClick={(e) => { e.stopPropagation(); moveSection(sIdx, 'up'); }}
                           title="Move Section Up"
+                          aria-label="Move Section Up"
                           style={{ padding: '0.3rem' }}
                         >
                           <ArrowUp size={14} />
@@ -1115,6 +1133,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                           disabled={sIdx === sections.length - 1}
                           onClick={(e) => { e.stopPropagation(); moveSection(sIdx, 'down'); }}
                           title="Move Section Down"
+                          aria-label="Move Section Down"
                           style={{ padding: '0.3rem' }}
                         >
                           <ArrowDown size={14} />
@@ -1125,6 +1144,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                             onClick={(e) => { e.stopPropagation(); removeSection(sec.id); }}
                             style={{ color: 'var(--accent-rose)', padding: '0.3rem' }}
                             title="Delete Section"
+                            aria-label="Delete Section"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1140,6 +1160,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         setSections(sections.map((s) => (s.id === sec.id ? { ...s, title: updatedTitle } : s)));
                       }}
                       placeholder="Section Title"
+                      aria-label="Section Title"
                       style={{
                         fontSize: '1.35rem',
                         fontWeight: 700,
@@ -1163,6 +1184,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         setSections(sections.map((s) => (s.id === sec.id ? { ...s, description: updatedDesc } : s)));
                       }}
                       placeholder="Description (optional)"
+                      aria-label="Section Description"
                       rows={2}
                       style={{
                         width: '100%',
@@ -1391,6 +1413,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 <option value="date">Date</option>
                                 <option value="time">Time</option>
                                 <option value="file_upload">File Upload</option>
+                                <option value="camera_photo">Camera Photo Capture (Physical Copy)</option>
                                 <option value="signature">Digital Signature</option>
                                 <option value="location">Privacy Location (Region)</option>
                                 <option value="title_block">Title & Description Block</option>
@@ -1519,6 +1542,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                     <option value={1}>1</option>
                                     <option value={5}>5</option>
                                     <option value={10}>10</option>
+                                    <option value={20}>20</option>
                                   </select>
                                 </div>
 
@@ -1533,6 +1557,58 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                     <option value={5}>5 MB</option>
                                     <option value={10}>10 MB</option>
                                     <option value={100}>100 MB</option>
+                                    <option value={1000}>1 GB (1,000 MB)</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Camera Photo Capture Question Configuration */}
+                          {f.type === 'camera_photo' && (
+                            <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', border: '1px solid var(--border-color)', display: 'grid', gap: '0.75rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Camera size={20} color="var(--primary)" />
+                                <div>
+                                  <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    Camera Photo Capture (Physical Copy / Multi-Page)
+                                  </div>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                    Prompts respondents to capture physical paper forms (front/back pages, receipts, documents) directly with their camera or webcam.
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)' }}>
+                                <div>
+                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum number of photos / pages:</label>
+                                  <select
+                                    value={f.validation?.maxFileCount ?? 5}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileCount: Number(e.target.value) } })}
+                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                  >
+                                    <option value={1}>1 photo (Single side)</option>
+                                    <option value={2}>2 photos (Front & Back)</option>
+                                    <option value={3}>3 photos</option>
+                                    <option value={5}>5 photos (Multi-page)</option>
+                                    <option value={10}>10 photos</option>
+                                    <option value={20}>20 photos</option>
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum photo size:</label>
+                                  <select
+                                    value={f.validation?.maxFileSizeMB ?? 10}
+                                    onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileSizeMB: Number(e.target.value) } })}
+                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                  >
+                                    <option value={5}>5 MB</option>
+                                    <option value={10}>10 MB</option>
+                                    <option value={25}>25 MB</option>
+                                    <option value={50}>50 MB</option>
+                                    <option value={100}>100 MB</option>
+                                    <option value={1000}>1 GB (1,000 MB)</option>
                                   </select>
                                 </div>
                               </div>

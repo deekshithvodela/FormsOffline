@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, ArrowRight, ArrowLeft, CheckCircle, Clock, AlertTriangle, Star, MapPin, Trash2, Folder, Database, FileText, Upload } from 'lucide-react';
+import { Save, ArrowRight, ArrowLeft, CheckCircle, Clock, AlertTriangle, Star, MapPin, Trash2, Folder, Database, FileText, Upload, Camera, Plus } from 'lucide-react';
 import { FormSubmission, FormTemplate, UserProfile, FormField, AllowedFileType } from '../../core/types';
 import { db } from '../../db/database';
 import { getNextSectionId } from '../../core/branching/evaluator';
 import { createProvenanceEntry } from '../../core/merge/mergeEngine';
 import { TemplateGalleryModal } from '../components/TemplateGalleryModal';
+import { CameraCaptureModal } from '../components/CameraCaptureModal';
+import { MediaPreviewModal, MediaPreviewItem } from '../components/MediaPreviewModal';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface RapidEntryProps {
   activeTemplate?: FormTemplate | null;
@@ -28,6 +31,14 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [activeCameraFieldId, setActiveCameraFieldId] = useState<string | null>(null);
+  const [retakePhotoIndex, setRetakePhotoIndex] = useState<number | null>(null);
+  const [previewMediaItem, setPreviewMediaItem] = useState<MediaPreviewItem | null>(null);
+  const [previewGallery, setPreviewGallery] = useState<MediaPreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState<number>(0);
+
+  // Lock body scroll when discard confirmation dialog is open
+  useBodyScrollLock(isDiscardConfirmOpen);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -37,6 +48,11 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
     db.templates.toArray().then((tpls) => {
       setTemplates(tpls);
       setIsLoading(false);
+
+      // Set active template if explicitly passed as prop
+      if (activeTemplate) {
+        setSelectedTemplate(activeTemplate);
+      }
     });
 
     db.userProfile.toArray().then((profiles) => {
@@ -48,8 +64,12 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
 
   useEffect(() => {
     if (activeTemplate) {
-      setSelectedTemplate(activeTemplate);
-      resetForm();
+      setSelectedTemplate((prev) => {
+        if (prev?.id !== activeTemplate.id) {
+          resetForm();
+        }
+        return activeTemplate;
+      });
     }
   }, [activeTemplate]);
 
@@ -136,11 +156,13 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
     ctx.beginPath();
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    ctx.moveTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -151,13 +173,16 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-    ctx.strokeStyle = 'var(--primary)';
+    ctx.strokeStyle = '#6366f1';
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
+    ctx.lineJoin = 'round';
+    ctx.lineTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
     ctx.stroke();
   };
 
@@ -178,6 +203,78 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     handleInputChange(fieldId, null);
+  };
+
+  const isMobileDevice = () =>
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse) and (max-width: 768px)').matches);
+
+  const handleTriggerCamera = (fieldId: string, targetIndex?: number | null) => {
+    saveDraft();
+    setRetakePhotoIndex(targetIndex !== undefined ? targetIndex : null);
+    if (isMobileDevice()) {
+      const fileInput = document.getElementById(`camera_input_${fieldId}`) as HTMLInputElement | null;
+      fileInput?.click();
+    } else {
+      setActiveCameraFieldId(fieldId);
+    }
+  };
+
+  const handleCameraModalCapture = (photo: { name: string; type: string; size: number; data: string }) => {
+    if (activeCameraFieldId) {
+      const currentVal = formData[activeCameraFieldId];
+      const currentPhotos: any[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal] : []);
+      const newPhoto = {
+        name: photo.name,
+        type: photo.type,
+        size: photo.size,
+        data: photo.data,
+        capturedAt: new Date().toISOString()
+      };
+
+      let updated: any[];
+      if (retakePhotoIndex !== null && retakePhotoIndex >= 0 && retakePhotoIndex < currentPhotos.length) {
+        updated = [...currentPhotos];
+        updated[retakePhotoIndex] = newPhoto;
+      } else {
+        updated = [...currentPhotos, newPhoto];
+      }
+
+      handleInputChange(activeCameraFieldId, updated);
+      setActiveCameraFieldId(null);
+      setRetakePhotoIndex(null);
+    }
+  };
+
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>, fieldId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const now = new Date();
+      const currentVal = formData[fieldId];
+      const currentPhotos: any[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal] : []);
+      const photoObj = {
+        name: file.name || `Photo_${now.toISOString().slice(0, 10)}.jpg`,
+        type: file.type || 'image/jpeg',
+        size: file.size,
+        data: evt.target?.result as string,
+        capturedAt: now.toISOString()
+      };
+
+      let updated: any[];
+      if (retakePhotoIndex !== null && retakePhotoIndex >= 0 && retakePhotoIndex < currentPhotos.length) {
+        updated = [...currentPhotos];
+        updated[retakePhotoIndex] = photoObj;
+      } else {
+        updated = [...currentPhotos, photoObj];
+      }
+
+      handleInputChange(fieldId, updated);
+      setRetakePhotoIndex(null);
+    };
+    reader.readAsDataURL(file);
   };
 
   const getAcceptString = (allowedTypes?: AllowedFileType[]): string | undefined => {
@@ -527,21 +624,23 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
             </button>
           )}
 
-          {saveStatus === 'saved' && (
-            <span className="badge badge-green">
-              <CheckCircle size={14} style={{ marginRight: '0.3rem' }} /> Autosaved
-            </span>
-          )}
-          {saveStatus === 'saving' && (
-            <span className="badge badge-purple">
-              <Clock size={14} style={{ marginRight: '0.3rem' }} /> Saving...
-            </span>
-          )}
-          {saveStatus === 'dirty' && (
-            <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)' }}>
-              Unsaved Changes
-            </span>
-          )}
+          <div style={{ minWidth: '135px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {saveStatus === 'saved' && (
+              <span className="badge badge-green">
+                <CheckCircle size={14} style={{ marginRight: '0.3rem' }} /> Autosaved
+              </span>
+            )}
+            {saveStatus === 'saving' && (
+              <span className="badge badge-purple">
+                <Clock size={14} style={{ marginRight: '0.3rem' }} /> Saving...
+              </span>
+            )}
+            {saveStatus === 'dirty' && (
+              <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)' }}>
+                Unsaved Changes
+              </span>
+            )}
+          </div>
 
           <button className="btn btn-outline" onClick={saveDraft} title="Ctrl + S">
             <Save size={16} />
@@ -814,19 +913,34 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                                       border: '1px solid var(--border-color)',
                                       padding: '0.45rem 0.75rem',
                                       borderRadius: 'var(--radius-sm)',
-                                      fontSize: '0.85rem'
+                                      fontSize: '0.85rem',
+                                      maxWidth: '100%'
                                     }}
                                   >
-                                    <FileText size={16} color="var(--primary)" />
-                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fileObj.name || `File ${idx + 1}`}</span>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                      {fileObj.size ? `(${(fileObj.size / (1024 * 1024)).toFixed(2)} MB)` : ''}
+                                    <FileText size={16} color="var(--primary)" style={{ flexShrink: 0 }} />
+                                    <span
+                                      style={{
+                                        maxWidth: '180px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        display: 'inline-block',
+                                        verticalAlign: 'middle',
+                                        fontWeight: 500
+                                      }}
+                                      title={fileObj.name || `File_${idx + 1}`}
+                                    >
+                                      {fileObj.name || `File_${idx + 1}`}
+                                    </span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                                      ({(fileObj.size / 1024).toFixed(1)} KB)
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => removeUploadedFile(f.id, idx)}
-                                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-rose)', padding: '0.2rem', marginLeft: '0.2rem' }}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-rose)', padding: '0 0.2rem', flexShrink: 0 }}
                                       title="Remove file"
+                                      aria-label={`Remove file ${fileObj.name || idx + 1}`}
                                     >
                                       <Trash2 size={14} />
                                     </button>
@@ -836,6 +950,162 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                             )}
                           </div>
                         )}
+
+                        {/* Camera Photo Capture Field */}
+                        {f.type === 'camera_photo' && (() => {
+                          const currentVal = formData[f.id];
+                          const currentPhotos: any[] = Array.isArray(currentVal) ? currentVal : (currentVal ? [currentVal] : []);
+                          const maxPhotos = f.validation?.maxFileCount || 5;
+
+                          return (
+                            <div style={{ marginTop: '0.4rem' }}>
+                              <input
+                                id={`camera_input_${f.id}`}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={(e) => handleCameraCapture(e, f.id)}
+                                style={{ display: 'none' }}
+                              />
+
+                              {currentPhotos.length === 0 ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTriggerCamera(f.id)}
+                                    className="btn btn-primary"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem' }}
+                                  >
+                                    <Camera size={18} />
+                                    <span>Take Photo (Page 1)</span>
+                                  </button>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    Capture physical paper forms or evidence (Limit: {maxPhotos} {maxPhotos === 1 ? 'photo' : 'photos / pages'})
+                                  </span>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'grid', gap: '0.6rem' }}>
+                                  {currentPhotos.map((photo, pIdx) => (
+                                    <div
+                                      key={pIdx}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.85rem',
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border-color)',
+                                        padding: '0.6rem 0.85rem',
+                                        borderRadius: 'var(--radius-sm)',
+                                        minWidth: 0,
+                                        maxWidth: '100%'
+                                      }}
+                                    >
+                                      {photo.data && (
+                                        <img
+                                          src={photo.data}
+                                          alt={`Page ${pIdx + 1}`}
+                                          style={{ width: '70px', height: '52px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)', cursor: 'pointer', flexShrink: 0 }}
+                                          onClick={() => {
+                                            const gallery: MediaPreviewItem[] = currentPhotos.map((p, idx) => ({
+                                              title: `${f.label || 'Physical Form Photo'} — Page ${idx + 1}`,
+                                              fileName: p.name,
+                                              type: p.type,
+                                              size: p.size,
+                                              dataUrl: p.data,
+                                              capturedAt: p.capturedAt ? new Date(p.capturedAt).toLocaleString() : undefined
+                                            }));
+                                            setPreviewMediaItem(gallery[pIdx]);
+                                            setPreviewGallery(gallery);
+                                            setPreviewInitialIndex(pIdx);
+                                          }}
+                                          title="Click to view full photo in lightbox"
+                                        />
+                                      )}
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                          <span className="badge badge-purple" style={{ fontSize: '0.72rem', flexShrink: 0 }}>
+                                            {pIdx === 0 ? 'Page 1 (Front)' : pIdx === 1 ? 'Page 2 (Back)' : `Page ${pIdx + 1}`}
+                                          </span>
+                                          <span
+                                            style={{
+                                              fontWeight: 600,
+                                              fontSize: '0.84rem',
+                                              color: 'var(--text-primary)',
+                                              textOverflow: 'ellipsis',
+                                              overflow: 'hidden',
+                                              whiteSpace: 'nowrap',
+                                              maxWidth: '220px',
+                                              display: 'inline-block',
+                                              verticalAlign: 'middle',
+                                              cursor: 'pointer'
+                                            }}
+                                            title={photo.name || `Photo Page ${pIdx + 1}`}
+                                            onClick={() => {
+                                              const gallery: MediaPreviewItem[] = currentPhotos.map((p, idx) => ({
+                                                title: `${f.label || 'Physical Form Photo'} — Page ${idx + 1}`,
+                                                fileName: p.name,
+                                                type: p.type,
+                                                size: p.size,
+                                                dataUrl: p.data,
+                                                capturedAt: p.capturedAt ? new Date(p.capturedAt).toLocaleString() : undefined
+                                              }));
+                                              setPreviewMediaItem(gallery[pIdx]);
+                                              setPreviewGallery(gallery);
+                                              setPreviewInitialIndex(pIdx);
+                                            }}
+                                          >
+                                            {photo.name || `Photo Page ${pIdx + 1}`}
+                                          </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                          {photo.size ? `${(photo.size / 1024).toFixed(1)} KB` : ''} • {photo.capturedAt ? new Date(photo.capturedAt).toLocaleTimeString() : 'Attached'}
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                        <button
+                                          type="button"
+                                          className="btn btn-outline"
+                                          onClick={() => handleTriggerCamera(f.id, pIdx)}
+                                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                                          title="Retake this page"
+                                        >
+                                          <Camera size={12} /> Retake
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="btn btn-outline"
+                                          onClick={() => {
+                                            const updated = currentPhotos.filter((_, idx) => idx !== pIdx);
+                                            handleInputChange(f.id, updated.length > 0 ? updated : null);
+                                          }}
+                                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', color: 'var(--accent-rose)' }}
+                                          title="Remove this page"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  {/* + Add Another Page Button */}
+                                  {currentPhotos.length < maxPhotos && (
+                                    <div style={{ marginTop: '0.25rem' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTriggerCamera(f.id, null)}
+                                        className="btn btn-outline"
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}
+                                      >
+                                        <Plus size={14} color="var(--primary)" />
+                                        <span>Capture Another Page / Photo ({currentPhotos.length + 1} of {maxPhotos})</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Radio Options Rendering */}
                         {f.type === 'radio' && (
@@ -989,6 +1259,26 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
           )}
         </div>
       )}
+
+      {/* Desktop Multi-Camera Live Viewfinder Modal */}
+      <CameraCaptureModal
+        isOpen={!!activeCameraFieldId}
+        onClose={() => setActiveCameraFieldId(null)}
+        onCapture={handleCameraModalCapture}
+        title="Capture Physical Form Photo"
+      />
+
+      {/* Universal Media Lightbox Preview Modal */}
+      <MediaPreviewModal
+        isOpen={!!previewMediaItem}
+        onClose={() => {
+          setPreviewMediaItem(null);
+          setPreviewGallery([]);
+        }}
+        item={previewMediaItem}
+        galleryItems={previewGallery}
+        initialIndex={previewInitialIndex}
+      />
     </div>
   );
 };

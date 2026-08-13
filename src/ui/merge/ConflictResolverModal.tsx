@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GitMerge, Check, X, AlertOctagon } from 'lucide-react';
 import { FieldConflict, FormSubmission } from '../../core/types';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface ConflictResolverModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
   onResolve,
   onCancel
 }) => {
+  useBodyScrollLock(isOpen);
+
   const [resolutions, setResolutions] = useState<Record<string, any>>(() => {
     const initial: Record<string, any> = {};
     conflicts.forEach((c) => {
@@ -41,13 +44,17 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
   return (
     <div style={{
       position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      backdropFilter: 'blur(4px)',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.75)',
+      zIndex: 10500,
       display: 'flex',
-      alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000,
+      alignItems: 'center',
+      overscrollBehavior: 'contain',
+      touchAction: 'none',
       padding: '1rem'
     }}>
       <div className="card" style={{ maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>

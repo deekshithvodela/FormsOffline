@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Folder, Search, FileText, Trash2, X, Check, Layers, Hash, LayoutGrid, List } from 'lucide-react';
 import { FormTemplate } from '../../core/types';
 import { db } from '../../db/database';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface TemplateGalleryModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
   onSelectTemplate,
   activeTemplateId
 }) => {
+  useBodyScrollLock(isOpen);
+
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,7 +91,9 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
       zIndex: 10500,
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      overscrollBehavior: 'contain',
+      touchAction: 'none'
     }}>
       <div className="card" style={{ width: '800px', maxWidth: '94vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}

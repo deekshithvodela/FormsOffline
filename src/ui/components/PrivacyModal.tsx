@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, X, HardDrive, Lock, EyeOff } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface PrivacyModalProps {
   isOpen: boolean;
@@ -7,6 +8,8 @@ interface PrivacyModalProps {
 }
 
 export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -18,8 +21,10 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) =
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
+      zIndex: 10500,
+      padding: '1rem',
+      overscrollBehavior: 'contain',
+      touchAction: 'none'
     }}>
       <div className="card" style={{
         maxWidth: '650px',

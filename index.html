@@ -1,10 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="theme-color" content="#f8fafc" />
+    
+    <!-- Synchronous Early Theme Restoration (Eliminates Dark Mode Flash on Refresh) -->
+    <script type="text/javascript">
+      (function() {
+        try {
+          var saved = localStorage.getItem('forms_offline_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved ? saved : (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.backgroundColor = theme === 'dark' ? '#0f172a' : '#f8fafc';
+          document.documentElement.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
+
+    <meta name="theme-color" content="#0f172a" />
     
     <!-- Primary Meta Tags -->
     <title>Forms Offline — Zero Backend Data Digitization & Form Authoring Platform</title>
@@ -18,7 +33,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Forms Offline" />
-    <link rel="apple-touch-icon" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="pwa-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="pwa-512x512.png" />
 
     <!-- Open Graph / Facebook Metadata -->
     <meta property="og:type" content="website" />
@@ -38,18 +55,30 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://gc.zgo.at" />
 
+    <!-- Early PWA Install Prompt Capture Hook -->
+    <script type="text/javascript">
+      window.__pwaInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa_prompt_ready'));
+      });
+    </script>
+
     <!-- Privacy-Friendly Analytics (GoatCounter) -->
     <script data-goatcounter="https://formsoffline.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 
     <!-- Clean Extensionless URL Restoration Script for GitHub Pages SPA -->
     <script type="text/javascript">
       (function(l) {
-        if (l.search[1] === '/') {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
+        if (l.search && l.search.length > 1) {
+          var q = l.search.slice(1);
+          var route = q.startsWith('/') ? q : '/' + q;
+          var decoded = route.split('&').map(function(s) { 
             return s.replace(/~and~/g, '&');
           }).join('?');
           window.history.replaceState(null, null,
-            l.pathname.slice(0, -1) + decoded + l.hash
+            l.pathname.replace(/\/+$/, '') + decoded + l.hash
           );
         }
       }(window.location));

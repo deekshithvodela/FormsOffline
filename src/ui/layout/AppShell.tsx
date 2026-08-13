@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Database, Shield, PenTool, HardDrive, User, Folder, Combine, Sun, Moon, HelpCircle, X, ChevronRight } from 'lucide-react';
+import { FileText, Database, Shield, PenTool, HardDrive, User, Folder, Combine, Sun, Moon, HelpCircle, X, ChevronRight, ArrowDownToLine } from 'lucide-react';
 import { PrivacyModal } from '../components/PrivacyModal';
 import { UserProfileModal } from '../components/UserProfileModal';
+import { InstallAppModal } from '../components/InstallAppModal';
 import { LongPressTooltip } from '../components/LongPressTooltip';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { getStorageMetrics, requestPersistentStorage, StorageMetrics, db } from '../../db/database';
 import { seedDefaultTemplates } from '../../db/defaultTemplates';
 import { UserProfile } from '../../core/types';
@@ -16,12 +18,31 @@ interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, children }) => {
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [storageMetrics, setStorageMetrics] = useState<StorageMetrics | null>(null);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('forms_offline_theme') as 'dark' | 'light') || 'light';
+  const [deferredPrompt, setDeferredPrompt] = useState<any>((window as any).__pwaInstallPrompt || null);
+  const [isStandaloneMode, setIsStandaloneMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://')
+    );
   });
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof document !== 'undefined') {
+      const docTheme = document.documentElement.getAttribute('data-theme');
+      if (docTheme === 'dark' || docTheme === 'light') return docTheme;
+    }
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('forms_offline_theme') : null;
+    if (saved === 'dark' || saved === 'light') return saved;
+    return (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  });
+
+  // Lock body scroll when mobile navigation drawer is open
+  useBodyScrollLock(isMobileDrawerOpen);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -32,31 +53,100 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
     }
   }, [theme]);
 
+  // Detect PWA installability and standalone status
+  useEffect(() => {
+    const checkStandalone = () => {
+      const standalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true ||
+        document.referrer.includes('android-app://');
+      setIsStandaloneMode(standalone);
+    };
+    checkStandalone();
+
+    if ((window as any).__pwaInstallPrompt) {
+      setDeferredPrompt((window as any).__pwaInstallPrompt);
+    }
+
+    const handlePromptReady = () => {
+      if ((window as any).__pwaInstallPrompt) {
+        setDeferredPrompt((window as any).__pwaInstallPrompt);
+      }
+    };
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).__pwaInstallPrompt = e;
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsStandaloneMode(true);
+      setDeferredPrompt(null);
+      (window as any).__pwaInstallPrompt = null;
+    };
+
+    window.addEventListener('pwa_prompt_ready', handlePromptReady);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('pwa_prompt_ready', handlePromptReady);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsStandaloneMode(true);
+        }
+        setDeferredPrompt(null);
+        (window as any).__pwaInstallPrompt = null;
+      } catch (err) {
+        console.error('Failed to trigger PWA install prompt:', err);
+        setIsInstallModalOpen(true);
+      }
+    } else {
+      setIsInstallModalOpen(true);
+    }
+  };
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const loadUserProfile = async () => {
     try {
-      const existing = await db.userProfile.limit(1).first();
-      if (existing) {
-        setUserProfile(existing);
+      const profiles = await db.userProfile.toArray();
+      if (profiles.length > 0) {
+        setUserProfile(profiles[0]);
       }
     } catch (err) {
-      console.error('Failed to load user profile in shell:', err);
+      console.error('Failed to load user profile in AppShell:', err);
+    }
+  };
+
+  const loadStorage = async () => {
+    try {
+      await requestPersistentStorage();
+      const metrics = await getStorageMetrics();
+      setStorageMetrics(metrics);
+    } catch (err) {
+      console.error('Failed to load storage metrics:', err);
     }
   };
 
   useEffect(() => {
     seedDefaultTemplates().catch((err) => console.error('Seeder execution error:', err));
     loadUserProfile();
-    requestPersistentStorage();
-    getStorageMetrics().then((metrics) => setStorageMetrics(metrics));
+    loadStorage();
 
-    const handleStorageChange = () => {
-      getStorageMetrics().then((metrics) => setStorageMetrics(metrics));
-    };
-
+    const handleStorageChange = () => loadStorage();
     window.addEventListener('forms_offline_storage_updated', handleStorageChange);
     return () => {
       window.removeEventListener('forms_offline_storage_updated', handleStorageChange);
@@ -128,6 +218,26 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
             {theme === 'dark' ? <Sun size={16} color="var(--accent-amber)" /> : <Moon size={16} color="var(--primary)" />}
           </button>
 
+          {!isStandaloneMode && (
+            <button
+              className="btn btn-outline btn-sm install-app-btn"
+              onClick={handleInstallApp}
+              title="Install Forms Offline on your device for instant offline launch"
+              aria-label="Install Forms Offline App"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                color: 'var(--primary)',
+                borderColor: 'var(--primary)',
+                background: 'var(--primary-light)'
+              }}
+            >
+              <ArrowDownToLine size={15} />
+              <span className="header-btn-label" style={{ fontWeight: 600 }}>Install App</span>
+            </button>
+          )}
+
           {storageMetrics && (
             <div className="storage-metrics-pill" title="Local IndexedDB Storage Used">
               <HardDrive size={14} color="var(--accent-blue)" />
@@ -162,16 +272,17 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
       </main>
 
       <footer className="app-footer">
-        <div>
-          Forms Offline • Created by{' '}
-          <a
-            href="https://linktr.ee/deekshithvodela"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Deekshith Vodela
-          </a>{' '}
-          • 100% Offline & Privacy-First • MIT License
+        <div className="footer-meta-left">
+          <span>Forms Offline • Created by{' '}
+            <a
+              href="https://linktr.ee/deekshithvodela"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Deekshith Vodela
+            </a>{' '}
+            • 100% Offline & Privacy-First • MIT License
+          </span>
         </div>
         <div className="footer-meta-right">
           <span className="badge badge-purple">v1.1.0</span>
@@ -238,6 +349,12 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         onProfileUpdated={(updated) => setUserProfile(updated)}
+      />
+      <InstallAppModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        onNativeInstall={handleInstallApp}
+        canNativeInstall={!!deferredPrompt}
       />
     </div>
   );

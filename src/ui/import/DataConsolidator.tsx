@@ -347,6 +347,7 @@ export const DataConsolidator: React.FC = () => {
                   const t = templates.find((item) => item.id === e.target.value);
                   if (t) setSelectedTemplateForShare(t);
                 }}
+                aria-label="Select form template for package export"
                 style={{ width: '100%' }}
               >
                 {templates.map((t) => (

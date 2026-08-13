@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, Sparkles, X, Code, AlertCircle } from 'lucide-react';
 import { parseFormFromUrl } from '../../services/formLinkParser';
 import { FormTemplate } from '../../core/types';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface SmartFormImporterModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ export const SmartFormImporterModal: React.FC<SmartFormImporterModalProps> = ({
   onClose,
   onImportSuccess
 }) => {
+  useBodyScrollLock(isOpen);
+
   const [activeTab, setActiveTab] = useState<'url' | 'html'>('url');
   const [url, setUrl] = useState('');
   const [htmlContent, setHtmlContent] = useState('');
@@ -47,10 +50,12 @@ export const SmartFormImporterModal: React.FC<SmartFormImporterModalProps> = ({
       inset: 0,
       background: 'rgba(0,0,0,0.8)',
       backdropFilter: 'blur(4px)',
-      zIndex: 1200,
+      zIndex: 10500,
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      overscrollBehavior: 'contain',
+      touchAction: 'none'
     }}>
       <div className="card" style={{ width: '540px', maxWidth: '92vw', boxSizing: 'border-box', padding: '1.5rem 1.25rem' }}>
         {/* Header */}

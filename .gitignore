@@ -1,4 +1,5 @@
 node_modules
 dist
+dev-dist
 lighthouse-*.json
 .DS_Store

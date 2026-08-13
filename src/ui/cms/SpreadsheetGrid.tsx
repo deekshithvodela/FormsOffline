@@ -6,6 +6,8 @@ import { db } from '../../db/database';
 import { exportToCSV, exportToXLSX, exportToZIPPackage, exportFormDataPackage, exportFormTemplatePackage, downloadBlob } from '../../services/exportService';
 import { TemplateGalleryModal } from '../components/TemplateGalleryModal';
 import { EditSubmissionModal } from './EditSubmissionModal';
+import { MediaPreviewModal, MediaPreviewItem } from '../components/MediaPreviewModal';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface SpreadsheetGridProps {
   activeTemplate?: FormTemplate | null;
@@ -29,10 +31,16 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
   const [showTechnicalSignatures, setShowTechnicalSignatures] = useState(false);
   const [activeShareMenuId, setActiveShareMenuId] = useState<string | null>(null);
 
-  // Bulk Selection & Safety Confirmation Modal states
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [deleteSingleTarget, setDeleteSingleTarget] = useState<FormSubmission | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+
+  // Lock background body scroll whenever any dialog or drawer is open
+  useBodyScrollLock(!!deleteSingleTarget || isBulkDeleteModalOpen || isProvenanceDrawerOpen);
+
+  const [previewMediaItem, setPreviewMediaItem] = useState<MediaPreviewItem | null>(null);
+  const [previewGallery, setPreviewGallery] = useState<MediaPreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState<number>(0);
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -82,10 +90,13 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     overscan: 10
   });
 
-  const renderCellContent = (f: FormField, val: any) => {
+  const renderCellContent = (f: FormField, val: any, sub?: FormSubmission) => {
     if (val === undefined || val === null || val === '') {
       return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>—</span>;
     }
+
+    const recTag = sub?.id ? ` (#${sub.id.split('_').pop()})` : '';
+    const subId = sub?.id || 'record';
 
     if (f.type === 'rating') {
       const num = Number(val) || 0;
@@ -116,7 +127,18 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
       if (typeof val === 'string' && val.startsWith('data:image')) {
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <img src={val} alt="Signature" style={{ height: '24px', borderRadius: '3px', background: '#0f172a', border: '1px solid var(--border-color)' }} />
+            <img
+              src={val}
+              alt="Signature"
+              style={{ height: '24px', borderRadius: '3px', background: '#0f172a', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+              onClick={() => setPreviewMediaItem({
+                title: `${f.label || 'Digital Signature'}${recTag}`,
+                dataUrl: val,
+                fileName: `Signature_${subId}.png`,
+                type: 'image/png'
+              })}
+              title="Click to view full signature"
+            />
             <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>Signed</span>
           </div>
         );
@@ -129,16 +151,95 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     }
 
     if (f.type === 'file_upload') {
-      const filesArray = Array.isArray(val) ? val : [val];
+      const filesArray: any[] = Array.isArray(val) ? val : (val && typeof val === 'object' && val.data ? [val] : []);
       const count = filesArray.length;
       const firstName = filesArray[0]?.name || (typeof filesArray[0] === 'string' ? 'File' : 'Attachment');
 
+      const gallery: MediaPreviewItem[] = filesArray.map((fileObj, idx) => ({
+        title: `${f.label || 'Attached Document'}${recTag} — File ${idx + 1} of ${filesArray.length}`,
+        dataUrl: fileObj.data,
+        fileName: fileObj.name || `Attachment_${idx + 1}`,
+        size: fileObj.size,
+        type: fileObj.type
+      }));
+
       return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <FileText size={14} color="var(--primary)" />
-          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{firstName}</span>
-          {count > 1 && <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>+{count - 1}</span>}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: filesArray.length > 0 ? 'pointer' : 'default', minWidth: 0, maxWidth: '100%' }}
+          onClick={() => {
+            if (gallery.length > 0) {
+              setPreviewMediaItem(gallery[0]);
+              setPreviewGallery(gallery);
+              setPreviewInitialIndex(0);
+            }
+          }}
+          title={filesArray.length > 0 ? `${firstName} (Click to inspect all ${count} files in gallery)` : firstName}
+        >
+          <FileText size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+          <span
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '130px',
+              display: 'inline-block',
+              verticalAlign: 'middle'
+            }}
+          >
+            {firstName}
+          </span>
+          {count > 1 && <span className="badge badge-purple" style={{ fontSize: '0.7rem', flexShrink: 0 }}>+{count - 1}</span>}
         </div>
+      );
+    }
+
+    if (f.type === 'camera_photo') {
+      const photos = Array.isArray(val) ? val : (val && typeof val === 'object' && val.data ? [val] : []);
+      if (photos.length > 0) {
+        const firstPhoto = photos[0];
+        const count = photos.length;
+        const gallery: MediaPreviewItem[] = photos.map((p, idx) => ({
+          title: `${f.label || 'Form Physical Photo'}${recTag} — Page ${idx + 1}`,
+          dataUrl: p.data,
+          fileName: p.name || `Photo_${subId}_P${idx + 1}.jpg`,
+          size: p.size,
+          type: p.type || 'image/jpeg',
+          capturedAt: p.capturedAt ? new Date(p.capturedAt).toLocaleString() : undefined
+        }));
+
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <img
+              src={firstPhoto.data}
+              alt="Photo"
+              style={{ width: '28px', height: '20px', objectFit: 'cover', borderRadius: '2px', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+              onClick={() => {
+                setPreviewMediaItem(gallery[0]);
+                setPreviewGallery(gallery);
+                setPreviewInitialIndex(0);
+              }}
+              title="Click to view photo gallery in lightbox"
+            />
+            <span
+              style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => {
+                setPreviewMediaItem(gallery[0]);
+                setPreviewGallery(gallery);
+                setPreviewInitialIndex(0);
+              }}
+            >
+              📷 {count === 1 ? 'Photo' : `${count} Photos`}
+            </span>
+            {count > 1 && <span className="badge badge-purple" style={{ fontSize: '0.68rem', padding: '0.1rem 0.35rem' }}>+{count - 1}</span>}
+          </div>
+        );
+      }
+      return val ? (
+        <span className="badge badge-purple" style={{ fontSize: '0.72rem' }}>📷 Attached</span>
+      ) : (
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>
       );
     }
 
@@ -440,9 +541,40 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
           overflow: 'auto',
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-md)'
+          borderRadius: 'var(--radius-md)',
+          position: 'relative'
         }}
       >
+        {/* Header Row (Sticky at scroll top) */}
+        <div
+          style={{
+            display: 'flex',
+            minWidth: 'max-content',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            background: 'var(--bg-card-hover)',
+            borderBottom: '2px solid var(--border-color)',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)'
+          }}
+        >
+          <div style={{ width: '40px', padding: '0.6rem 0.5rem', flexShrink: 0, textAlign: 'center', cursor: 'pointer' }} onClick={toggleSelectAll}>
+            {allSelected ? <CheckSquare size={16} color="var(--primary)" /> : <Square size={16} color="var(--text-muted)" />}
+          </div>
+          <div style={{ width: '120px', padding: '0.6rem 1rem', flexShrink: 0 }}>Record Tag</div>
+          <div style={{ width: '100px', padding: '0.6rem 1rem', flexShrink: 0 }}>Status</div>
+          <div style={{ width: '160px', padding: '0.6rem 1rem', flexShrink: 0 }}>Submitted At (UTC)</div>
+          {fields.map((f) => (
+            <div key={f.id} style={{ width: '180px', padding: '0.6rem 1rem', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.label}>
+              {f.label}
+            </div>
+          ))}
+          <div style={{ width: '140px', padding: '0.6rem 1rem', flexShrink: 0 }}>Actions</div>
+        </div>
+
+        {/* Virtualized Row Container */}
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -450,35 +582,6 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
             position: 'relative'
           }}
         >
-          {/* Header Row */}
-          <div
-            style={{
-              display: 'flex',
-              minWidth: 'max-content',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
-              background: 'var(--bg-card-hover)',
-              borderBottom: '2px solid var(--border-color)',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)'
-            }}
-          >
-            <div style={{ width: '40px', padding: '0.6rem 0.5rem', flexShrink: 0, textAlign: 'center', cursor: 'pointer' }} onClick={toggleSelectAll}>
-              {allSelected ? <CheckSquare size={16} color="var(--primary)" /> : <Square size={16} color="var(--text-muted)" />}
-            </div>
-            <div style={{ width: '120px', padding: '0.6rem 1rem', flexShrink: 0 }}>Record Tag</div>
-            <div style={{ width: '100px', padding: '0.6rem 1rem', flexShrink: 0 }}>Status</div>
-            <div style={{ width: '160px', padding: '0.6rem 1rem', flexShrink: 0 }}>Submitted At (UTC)</div>
-            {fields.map((f) => (
-              <div key={f.id} style={{ width: '180px', padding: '0.6rem 1rem', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.label}>
-                {f.label}
-              </div>
-            ))}
-            <div style={{ width: '140px', padding: '0.6rem 1rem', flexShrink: 0 }}>Actions</div>
-          </div>
-
           {/* Virtual Rows */}
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const sub = filteredSubmissions[virtualRow.index];
@@ -522,7 +625,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
                 </div>
                 {fields.map((f) => (
                   <div key={f.id} style={{ width: '180px', padding: '0 1rem', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
-                    {renderCellContent(f, sub.data[f.id])}
+                    {renderCellContent(f, sub.data[f.id], sub)}
                   </div>
                 ))}
                 <div style={{ width: '140px', padding: '0 1rem', flexShrink: 0, display: 'flex', gap: '0.3rem' }}>
@@ -699,7 +802,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
               {fields.map((f) => (
                 <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', flexWrap: 'wrap', gap: '0.25rem' }}>
                   <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{f.label}:</span>
-                  <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{renderCellContent(f, selectedSubmission.data[f.id])}</div>
+                  <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{renderCellContent(f, selectedSubmission.data[f.id], selectedSubmission)}</div>
                 </div>
               ))}
             </div>
@@ -707,7 +810,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
             <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.8rem' }}>Submission Audit History</h4>
 
             <div style={{ display: 'grid', gap: '0.8rem', marginBottom: '1.25rem' }}>
-              {selectedSubmission.provenance.map((prov: ProvenanceEntry) => (
+              {selectedSubmission.provenance.map((prov: ProvenanceEntry, pIdx: number) => (
                 <div key={prov.id} style={{
                   border: '1px solid var(--border-color)',
                   padding: '0.8rem',
@@ -715,12 +818,25 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
                   fontSize: '0.85rem'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                    <span className="badge badge-green">{prov.action.toUpperCase()}</span>
+                    <span className="badge badge-green">{prov.action.toUpperCase()} (v{pIdx + 1})</span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{new Date(prov.timestamp).toLocaleString()}</span>
                   </div>
-                  <div style={{ color: 'var(--text-secondary)' }}>
+                  <div style={{ color: 'var(--text-secondary)', marginBottom: prov.diffSummary ? '0.5rem' : '0' }}>
                     Author: <strong>{prov.authorAlias || 'Operator'}</strong>
                   </div>
+
+                  {/* Version Diff Details */}
+                  {prov.diffSummary && (() => {
+                    const cleanDiff = prov.diffSummary.replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[a-zA-Z0-9+/=]+/g, '[Digital Signature / Image]');
+                    return (
+                      <div style={{ background: 'var(--bg-input)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', borderLeft: '3px solid var(--primary)', marginTop: '0.4rem' }}>
+                        <strong style={{ display: 'block', marginBottom: '0.25rem', color: 'var(--primary)' }}>Revision Changes:</strong>
+                        <div style={{ color: 'var(--text-primary)', wordBreak: 'break-word', lineHeight: 1.4 }}>
+                          {cleanDiff}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -750,6 +866,18 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
           </div>
         </div>
       )}
+
+      {/* Universal Media Lightbox Preview Modal */}
+      <MediaPreviewModal
+        isOpen={!!previewMediaItem}
+        onClose={() => {
+          setPreviewMediaItem(null);
+          setPreviewGallery([]);
+        }}
+        item={previewMediaItem}
+        galleryItems={previewGallery}
+        initialIndex={previewInitialIndex}
+      />
     </div>
   );
 };

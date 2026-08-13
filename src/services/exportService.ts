@@ -40,10 +40,14 @@ export function exportToCSV(template: FormTemplate, submissions: FormSubmission[
       const val = sub.data[f.id];
       if (val === undefined || val === null) return '""';
       
-      // Clean single-cell array formatting for Checkboxes / Multi-selects / File Uploads
+      // Clean single-cell array formatting for Checkboxes / Multi-selects / File Uploads / Multi-Photo Captures
       if (Array.isArray(val)) {
         if (f.type === 'file_upload') {
           const names = val.map((v) => (typeof v === 'object' && v?.name ? v.name : 'Attached File'));
+          return `"${names.join(', ').replace(/"/g, '""')}"`;
+        }
+        if (f.type === 'camera_photo') {
+          const names = val.map((v, idx) => (typeof v === 'object' && v?.name ? v.name : `Photo_Page_${idx + 1}.jpg`));
           return `"${names.join(', ').replace(/"/g, '""')}"`;
         }
         const formattedArrayStr = val.join(', ').replace(/"/g, '""');
@@ -51,7 +55,7 @@ export function exportToCSV(template: FormTemplate, submissions: FormSubmission[
       }
       
       if (typeof val === 'object') {
-        if (f.type === 'file_upload' && val.name) {
+        if ((f.type === 'file_upload' || f.type === 'camera_photo') && val.name) {
           return `"${String(val.name).replace(/"/g, '""')}"`;
         }
         return `"${canonicalizeJSON(val).replace(/"/g, '""')}"`;
@@ -83,31 +87,64 @@ export async function exportToXLSX(template: FormTemplate, submissions: FormSubm
   const tempWb = XLSX.read(csvString, { type: 'string' });
   const sheet1 = tempWb.Sheets[tempWb.SheetNames[0]];
 
-  // Sheet 2: Version Audit Log (Consolidated Revision Provenance History)
+  // Sheet 2: Version Audit Log (Consolidated Revision Provenance History with Diffs)
   const auditRows: string[][] = [
-    ['Record Tag', 'Timestamp (UTC)', 'Action', 'Operator Alias', 'Device ID', 'SHA-256 Payload Signature']
+    [
+      'Record Tag',
+      'Version',
+      'Timestamp (UTC)',
+      'Action',
+      'Operator Alias',
+      'Device ID',
+      'Changed Fields',
+      'Previous Values (Before)',
+      'New Values (After)',
+      'Diff Summary',
+      'SHA-256 Payload Signature'
+    ]
   ];
 
   submissions.forEach((sub) => {
     const recordTag = `#${sub.id.split('_').pop()}`;
     if (sub.provenance && sub.provenance.length > 0) {
-      sub.provenance.forEach((prov) => {
+      sub.provenance.forEach((prov, pIdx) => {
+        const prevValuesStr = prov.previousValues
+          ? Object.entries(prov.previousValues)
+              .map(([k, v]) => `${k}: ${typeof v === 'object' ? (v?.name || JSON.stringify(v)) : (v ?? '')}`)
+              .join(' | ')
+          : '';
+        const newValuesStr = prov.newValues
+          ? Object.entries(prov.newValues)
+              .map(([k, v]) => `${k}: ${typeof v === 'object' ? (v?.name || JSON.stringify(v)) : (v ?? '')}`)
+              .join(' | ')
+          : '';
+
         auditRows.push([
           recordTag,
+          `v${pIdx + 1}`,
           prov.timestamp,
           prov.action.toUpperCase(),
           prov.authorAlias || 'Operator 1',
           prov.deviceId || sub.deviceId || 'local_device',
+          prov.changedFields?.join(', ') || (prov.action === 'created' ? 'Initial Creation' : ''),
+          prevValuesStr,
+          newValuesStr,
+          prov.diffSummary || (prov.action === 'created' ? 'Record created' : ''),
           prov.hash
         ]);
       });
     } else {
       auditRows.push([
         recordTag,
+        'v1',
         sub.createdAt,
         'CREATED',
         'Operator 1',
         sub.deviceId || 'local_device',
+        'Initial Creation',
+        '',
+        '',
+        'Record created',
         'N/A'
       ]);
     }
@@ -125,7 +162,7 @@ export async function exportToXLSX(template: FormTemplate, submissions: FormSubm
 
 /**
  * All-in-One Portable ZIP Package Exporter (JSZip)
- * Bundles `Responses.xlsx` + `attachments/` folder containing exported PNG/JPG signatures and uploaded documents.
+ * Bundles `Responses.xlsx` + `attachments/` folder containing exported PNG/JPG signatures, photos, and uploaded documents.
  */
 export async function exportToZIPPackage(template: FormTemplate, submissions: FormSubmission[]): Promise<Blob> {
   const JSZip = (await import('jszip')).default;
@@ -150,6 +187,27 @@ export async function exportToZIPPackage(template: FormTemplate, submissions: Fo
         const base64Data = val.replace(/^data:image\/\w+;base64,/, '');
         attachmentsFolder?.file(fileName, base64Data, { base64: true });
         newData[f.id] = `attachments/${fileName}`;
+      }
+
+      // Handle Camera Photo Answers (Single or Multi-Page Photo Arrays)
+      if (f.type === 'camera_photo' && val) {
+        const photosArray = Array.isArray(val) ? val : [val];
+        const relativePaths: string[] = [];
+
+        photosArray.forEach((photoObj: any, pIdx: number) => {
+          if (photoObj && typeof photoObj === 'object' && photoObj.data && photoObj.data.startsWith('data:image')) {
+            const rawExt = photoObj.type?.split('/')[1] || 'jpg';
+            const fileExt = rawExt === 'jpeg' ? 'jpg' : rawExt;
+            const fileName = `Photo_Rec${recShortId}_Field${f.id}_P${pIdx + 1}.${fileExt}`;
+            const base64Data = photoObj.data.replace(/^data:image\/\w+;base64,/, '');
+            attachmentsFolder?.file(fileName, base64Data, { base64: true });
+            relativePaths.push(`attachments/${fileName}`);
+          }
+        });
+
+        if (relativePaths.length > 0) {
+          newData[f.id] = relativePaths.join(', ');
+        }
       }
 
       // Handle File Upload Answers

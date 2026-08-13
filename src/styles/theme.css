@@ -66,6 +66,21 @@
   padding: 0;
 }
 
+/* Accessibility Focus Rings (WCAG 2.1 AA) */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
 .builder-layout-grid {
   display: grid;
   grid-template-columns: 1fr 4rem;
@@ -553,7 +568,7 @@ html, body {
     border-radius: 9999px !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
     backdrop-filter: blur(12px) !important;
-    z-index: 9999 !important;
+    z-index: 500 !important;
     margin-top: 0 !important;
     width: auto !important;
   }
@@ -563,6 +578,13 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+body.modal-open .builder-action-palette,
+html.modal-open .builder-action-palette {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease;
 }
 
 .linear-scale-container {
