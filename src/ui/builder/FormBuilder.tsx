@@ -56,29 +56,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [openMenuFieldId, setOpenMenuFieldId] = useState<string | null>(null);
-  const [paletteOffsetTop, setPaletteOffsetTop] = useState<number>(0);
   const builderCanvasRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!builderCanvasRef.current) return;
-    let activeEl: HTMLElement | null = null;
-    if (activeFieldId) {
-      activeEl = builderCanvasRef.current.querySelector(`[data-field-id="${activeFieldId}"]`);
-    }
-    if (!activeEl && activeSectionId) {
-      activeEl = builderCanvasRef.current.querySelector(`[data-section-id="${activeSectionId}"]`);
-    }
-    if (!activeEl) {
-      activeEl = builderCanvasRef.current.querySelector(`[data-header-card="true"]`);
-    }
-
-    if (activeEl && builderCanvasRef.current) {
-      const canvasRect = builderCanvasRef.current.getBoundingClientRect();
-      const cardRect = activeEl.getBoundingClientRect();
-      const offset = Math.max(0, cardRect.top - canvasRect.top);
-      setPaletteOffsetTop(offset);
-    }
-  }, [activeFieldId, activeSectionId, sections]);
   const [isPreview, setIsPreview] = useState(false);
   const [previewSectionIndex, setPreviewSectionIndex] = useState(0);
   const [previewFormData, setPreviewFormData] = useState<Record<string, any>>({});
@@ -1774,25 +1752,8 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
           </div>
 
           {/* Sticky Right Action Palette (Google Forms Style) */}
-          <div style={{ position: 'relative', height: '100%' }}>
-            <div
-              className="builder-action-palette"
-              style={{
-                position: 'sticky',
-                top: '5rem',
-                transform: `translateY(${paletteOffsetTop}px)`,
-                transition: 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-color)',
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
-                zIndex: 20
-              }}
-            >
+          <div className="builder-palette-container" style={{ position: 'relative', height: '100%' }}>
+            <div className="builder-action-palette">
               <LongPressTooltip label="Add Question">
                 <button
                   className="btn btn-outline"

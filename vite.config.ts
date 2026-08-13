@@ -33,6 +33,12 @@ export default defineConfig({
     })
   ],
   base: process.env.GITHUB_ACTIONS ? '/FormsOffline/' : './',
+  server: {
+    port: 8080
+  },
+  preview: {
+    port: 8080
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

@@ -20,12 +20,16 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [storageMetrics, setStorageMetrics] = useState<StorageMetrics | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('forms_offline_theme') as 'dark' | 'light') || 'dark';
+    return (localStorage.getItem('forms_offline_theme') as 'dark' | 'light') || 'light';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('forms_offline_theme', theme);
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', theme === 'dark' ? '#0f172a' : '#f8fafc');
+    }
   }, [theme]);
 
   const toggleTheme = () => {
@@ -138,7 +142,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
             aria-label="Configure Operator Profile"
           >
             <User size={15} color="var(--primary)" />
-            <span>{userProfile?.alias || 'Operator'}</span>
+            <span className="header-btn-label">{userProfile?.alias || 'Operator'}</span>
           </button>
 
           <button
@@ -148,7 +152,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
             aria-label="View Zero-Telemetry Privacy Policy"
           >
             <Shield size={15} color="var(--accent-green)" />
-            <span>Privacy</span>
+            <span className="header-btn-label">Privacy</span>
           </button>
         </div>
       </header>

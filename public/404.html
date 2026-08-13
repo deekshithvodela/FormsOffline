@@ -12,7 +12,7 @@
         var path = l.pathname;
         
         // Handle lowercase repository URL case sensitivity (/formsoffline -> /FormsOffline/)
-        if (path.toLowerCase().startsWith('/formsoffline')) {
+        if (path.startsWith('/formsoffline')) {
           var remaining = path.slice('/formsoffline'.length);
           var correctedPath = '/FormsOffline' + remaining;
           l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + correctedPath + l.search + l.hash);
