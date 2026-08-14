@@ -18,17 +18,24 @@
         } catch (e) {}
       })();
     </script>
-
-    <meta name="theme-color" content="#0f172a" />
     
-    <!-- Primary Meta Tags -->
+    <!-- Theme and Color Scheme Metadata -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a" />
+    
+    <!-- Primary SEO & Canonical Meta Tags -->
     <title>Forms Offline — Zero Backend Data Digitization & Form Authoring Platform</title>
     <meta name="title" content="Forms Offline — Zero Backend Data Digitization & Form Authoring Platform" />
     <meta name="description" content="100% offline-first PWA for form authoring, Google & MS Form link importing, rapid field response collection, virtualized dataset CMS, and multi-sheet Excel exports." />
     <meta name="keywords" content="offline forms, zero backend, form builder, google forms importer, PWA data collection, offline field data, indexeddb forms, excel exporter, E2EE forms" />
     <meta name="author" content="Deekshith Vodela" />
+    <link rel="canonical" href="https://deekshithvodela.github.io/FormsOffline/" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
     
     <!-- Mobile & PWA Web App Meta Tags -->
+    <meta name="application-name" content="Forms Offline" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -40,12 +47,15 @@
     <!-- Open Graph / Facebook Metadata -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Forms Offline" />
+    <meta property="og:url" content="https://deekshithvodela.github.io/FormsOffline/" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="Forms Offline — Zero Backend Data Digitization & Form Authoring" />
     <meta property="og:description" content="Author forms, collect high-speed offline field data, manage datasets with built-in version control, and export multi-sheet Excel workbooks." />
     <meta property="og:image" content="https://deekshithvodela.github.io/FormsOffline/favicon.svg" />
 
     <!-- Twitter Metadata -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://deekshithvodela.github.io/FormsOffline/" />
     <meta name="twitter:title" content="Forms Offline — Zero Backend Data Digitization" />
     <meta name="twitter:description" content="100% offline-first PWA for form building, rapid data entry, dataset CMS, and cross-device data consolidation." />
     <meta name="twitter:image" content="https://deekshithvodela.github.io/FormsOffline/favicon.svg" />
@@ -92,9 +102,11 @@
       "name": "Forms Offline",
       "alternateName": "FormsOffline",
       "url": "https://deekshithvodela.github.io/FormsOffline/",
-      "description": "Zero-backend, 100% offline-first PWA for form authoring, Google/MS Form link importing, rapid field response collection, and dataset CMS.",
+      "description": "Zero-backend, 100% offline-first PWA for form authoring, Google/MS Form link importing, rapid field response collection, virtualized dataset CMS, and multi-sheet Excel exports.",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "All",
+      "browserRequirements": "Requires JavaScript. Requires HTML5 IndexedDB & WebCrypto.",
+      "softwareVersion": "1.1.0",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -104,7 +116,17 @@
         "@type": "Person",
         "name": "Deekshith Vodela",
         "url": "https://linktr.ee/deekshithvodela"
-      }
+      },
+      "featureList": [
+        "100% Offline-first IndexedDB storage via Dexie.js",
+        "1-Click Google Forms and Microsoft Forms link importing",
+        "Visual Form Builder with 15 question types & option branching",
+        "Rapid data entry stepper with 300ms debounced autosave",
+        "Virtualized Dataset CMS spreadsheet with in-app PDF and Office viewers",
+        "Multi-sheet Excel (.xlsx), CSV, and ZIP package export engine",
+        "Cross-device response consolidation with SHA-256 deduplication and merge conflict resolution",
+        "Zero tracking, zero cloud telemetry, MIT licensed"
+      ]
     }
     </script>
     <script type="module" crossorigin src="./assets/index-guUvKM6S.js"></script>

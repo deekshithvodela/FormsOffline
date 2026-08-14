@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "verify": "node scripts/verify-all.cjs",
+    "audit": "node scripts/run-performance-audit.cjs",
     "build:reference": "node scripts/generate-project-reference.cjs"
   },
   "dependencies": {

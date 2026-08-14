@@ -15,7 +15,8 @@ export default defineConfig({
         'pwa-512x512.png',
         'maskable-icon-512x512.png',
         'apple-touch-icon.png',
-        'robots.txt'
+        'robots.txt',
+        'sitemap.xml'
       ],
       devOptions: {
         enabled: true
@@ -62,7 +63,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,txt,xml}'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
         clientsClaim: true,
