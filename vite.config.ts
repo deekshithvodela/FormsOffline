@@ -12,6 +12,7 @@ export default defineConfig({
       includeAssets: [
         'favicon.svg',
         'og-image.png',
+        'og-image-square.png',
         'pwa-192x192.png',
         'pwa-512x512.png',
         'maskable-icon-512x512.png',
