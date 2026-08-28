@@ -132,8 +132,8 @@ export interface ProvenanceEntry {
   action: 'created' | 'updated' | 'merged';
   authorAlias?: string;
   changedFields?: string[];
-  previousValues?: Record<string, any>;
-  newValues?: Record<string, any>;
+  previousValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   diffSummary?: string;
 }
 
@@ -143,7 +143,7 @@ export interface FormSubmission {
   templateFingerprint: string;
   templateVersion: number;
   status: SubmissionStatus;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   createdAt: string; // ISO 8601 UTC
   updatedAt: string; // ISO 8601 UTC
   deviceId: string;
@@ -155,9 +155,9 @@ export interface FormSubmission {
 export interface FieldConflict {
   fieldId: string;
   fieldLabel: string;
-  localValue: any;
-  remoteValue: any;
-  resolvedValue?: any;
+  localValue: unknown;
+  remoteValue: unknown;
+  resolvedValue?: unknown;
 }
 
 export interface MergeResult {

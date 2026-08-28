@@ -124,7 +124,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [formData, selectedTemplate]);
 
-  const handleInputChange = (fieldId: string, val: any) => {
+  const handleInputChange = (fieldId: string, val: unknown) => {
     setFormData((prev) => ({ ...prev, [fieldId]: val }));
     setSaveStatus('dirty');
     if (validationErrors[fieldId]) {
@@ -223,7 +223,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
   const handleCameraModalCapture = (photo: { name: string; type: string; size: number; data: string }) => {
     if (activeCameraFieldId) {
       const currentVal = formData[activeCameraFieldId];
-      const currentPhotos: any[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal] : []);
+      const currentPhotos: { name: string; type: string; size: number; data: string; capturedAt?: string }[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal as { name: string; type: string; size: number; data: string }] : []);
       const newPhoto = {
         name: photo.name,
         type: photo.type,
@@ -232,7 +232,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
         capturedAt: new Date().toISOString()
       };
 
-      let updated: any[];
+      let updated: { name: string; type: string; size: number; data: string; capturedAt?: string }[];
       if (retakePhotoIndex !== null && retakePhotoIndex >= 0 && retakePhotoIndex < currentPhotos.length) {
         updated = [...currentPhotos];
         updated[retakePhotoIndex] = newPhoto;
@@ -254,7 +254,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
     reader.onload = (evt) => {
       const now = new Date();
       const currentVal = formData[fieldId];
-      const currentPhotos: any[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal] : []);
+      const currentPhotos: { name: string; type: string; size: number; data: string; capturedAt?: string }[] = Array.isArray(currentVal) ? [...currentVal] : (currentVal ? [currentVal as { name: string; type: string; size: number; data: string }] : []);
       const photoObj = {
         name: file.name || `Photo_${now.toISOString().slice(0, 10)}.jpg`,
         type: file.type || 'image/jpeg',
@@ -263,7 +263,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
         capturedAt: now.toISOString()
       };
 
-      let updated: any[];
+      let updated: { name: string; type: string; size: number; data: string; capturedAt?: string }[];
       if (retakePhotoIndex !== null && retakePhotoIndex >= 0 && retakePhotoIndex < currentPhotos.length) {
         updated = [...currentPhotos];
         updated[retakePhotoIndex] = photoObj;
@@ -306,7 +306,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
       ? [formData[field.id]]
       : [];
 
-    const newFilePromises: Promise<any>[] = [];
+    const newFilePromises: Promise<{ name: string; type: string; size: number; data: string }>[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -527,8 +527,8 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
 
   if (templates.length === 0) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-        <AlertTriangle size={48} color="var(--accent-amber)" style={{ marginBottom: '1rem' }} />
+      <div className="card entry-empty-state">
+        <AlertTriangle size={48} color="var(--accent-amber)" className="mb-md" />
         <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>No Saved Templates Found</h2>
         <p style={{ color: 'var(--text-secondary)' }}>
           Please go to the <strong>Form Builder</strong> tab to create and save a form template first.
@@ -561,12 +561,12 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" onClick={() => setIsGalleryOpen(true)} style={{ padding: '0.65rem 1.25rem' }}>
+            <button className="btn btn-primary pad-modal" onClick={() => setIsGalleryOpen(true)}>
               <Folder size={18} />
               <span>Select a Form Template</span>
             </button>
             {onNavigateToDashboard && (
-              <button className="btn btn-outline" onClick={onNavigateToDashboard} style={{ padding: '0.65rem 1.25rem' }}>
+              <button className="btn btn-outline pad-modal" onClick={onNavigateToDashboard}>
                 Go to Dashboard
               </button>
             )}
@@ -746,8 +746,8 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
       />
 
       {isCompleted ? (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-          <CheckCircle size={54} color="var(--accent-green)" style={{ marginBottom: '1rem' }} />
+        <div className="card entry-empty-state">
+          <CheckCircle size={54} color="var(--accent-green)" className="mb-md" />
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Submission Saved Successfully</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
             {selectedTemplate?.settings?.confirmationMessage || 'Record has been stored securely in your browser\'s IndexedDB.'}
@@ -835,7 +835,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                             value={formData[f.id] || ''}
                             onChange={(e) => handleInputChange(f.id, e.target.value)}
                             placeholder="Type answer..."
-                            style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
+                            className="entry-input-full"
                           />
                         )}
 
@@ -854,7 +854,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                             value={formData[f.id] || ''}
                             onChange={(e) => handleInputChange(f.id, e.target.value)}
                             placeholder="0"
-                            style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
+                            className="entry-input-full"
                           />
                         )}
 
@@ -863,7 +863,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                             type="date"
                             value={formData[f.id] || ''}
                             onChange={(e) => handleInputChange(f.id, e.target.value)}
-                            style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
+                            className="entry-input-full"
                           />
                         )}
 
@@ -872,7 +872,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                             type="time"
                             value={formData[f.id] || ''}
                             onChange={(e) => handleInputChange(f.id, e.target.value)}
-                            style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
+                            className="entry-input-full"
                           />
                         )}
 
@@ -885,7 +885,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                               value={formData[f.id] || ''}
                               onChange={(e) => handleInputChange(f.id, e.target.value)}
                               placeholder="Enter Region / City / District..."
-                              style={{ width: '100%' }}
+                              className="w-full"
                             />
                           </div>
                         )}
@@ -909,7 +909,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                               />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Draw signature above</span>
+                              <span className="entry-text-muted-sm">Draw signature above</span>
                               <button
                                 className="btn btn-outline"
                                 onClick={() => clearSignature(f.id)}
@@ -929,7 +929,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                               multiple={(f.validation?.maxFileCount || 1) > 1}
                               accept={getAcceptString(f.validation?.allowedFileTypes)}
                               onChange={(e) => handleFileUpload(e, f)}
-                              style={{ display: 'none' }}
+                              className="d-none"
                               id={`file_input_${f.id}`}
                             />
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -942,7 +942,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                                 <span>Add File(s)</span>
                               </label>
 
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              <span className="entry-text-muted-sm">
                                 Max {f.validation?.maxFileSizeMB || 10} MB per file (Max {f.validation?.maxFileCount || 1} file(s))
                               </span>
                             </div>
@@ -950,7 +950,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                             {/* Uploaded Files Badges */}
                             {formData[f.id] && (
                               <div style={{ marginTop: '0.8rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-                                {(Array.isArray(formData[f.id]) ? formData[f.id] : [formData[f.id]]).map((fileObj: any, idx: number) => (
+                                {(Array.isArray(formData[f.id]) ? formData[f.id] : [formData[f.id]]).map((fileObj: { name?: string; size?: number }, idx: number) => (
                                   <div
                                     key={idx}
                                     style={{
@@ -981,7 +981,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                                       {fileObj.name || `File_${idx + 1}`}
                                     </span>
                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                                      ({(fileObj.size / 1024).toFixed(1)} KB)
+                                      ({((fileObj.size ?? 0) / 1024).toFixed(1)} KB)
                                     </span>
                                     <button
                                       type="button"
@@ -1002,18 +1002,18 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                         {/* Camera Photo Capture Field */}
                         {f.type === 'camera_photo' && (() => {
                           const currentVal = formData[f.id];
-                          const currentPhotos: any[] = Array.isArray(currentVal) ? currentVal : (currentVal ? [currentVal] : []);
+                          const currentPhotos: { name?: string; data?: string; size?: number; type?: string; capturedAt?: string }[] = Array.isArray(currentVal) ? currentVal : (currentVal ? [currentVal as { name?: string; data?: string }] : []);
                           const maxPhotos = f.validation?.maxFileCount || 5;
 
                           return (
-                            <div style={{ marginTop: '0.4rem' }}>
+                            <div className="mt-sm">
                               <input
                                 id={`camera_input_${f.id}`}
                                 type="file"
                                 accept="image/*"
                                 capture="environment"
                                 onChange={(e) => handleCameraCapture(e, f.id)}
-                                style={{ display: 'none' }}
+                                className="d-none"
                               />
 
                               {currentPhotos.length === 0 ? (
@@ -1027,7 +1027,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                                     <Camera size={18} />
                                     <span>Take Photo (Page 1)</span>
                                   </button>
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                  <span className="entry-text-muted-sm">
                                     Capture physical paper forms or evidence (Limit: {maxPhotos} {maxPhotos === 1 ? 'photo' : 'photos / pages'})
                                   </span>
                                 </div>
@@ -1157,7 +1157,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
 
                         {/* Radio Options Rendering */}
                         {f.type === 'radio' && (
-                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          <div className="grid-gap-sm">
                             {(f.options || []).map((opt, oIdx) => (
                               <label key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
                                 <input
@@ -1175,7 +1175,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
 
                         {/* Checkbox & Multiselect Options Rendering */}
                         {(f.type === 'checkbox' || f.type === 'multiselect') && (
-                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          <div className="grid-gap-sm">
                             {(f.options || []).map((opt, oIdx) => {
                               const selectedValues: string[] = Array.isArray(formData[f.id]) ? formData[f.id] : [];
                               const isChecked = selectedValues.includes(opt.value);
@@ -1200,7 +1200,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                           <select
                             value={formData[f.id] || ''}
                             onChange={(e) => handleInputChange(f.id, e.target.value)}
-                            style={{ width: '100%' }}
+                            className="w-full"
                           >
                             <option value="">Select an option...</option>
                             {(f.options || []).map((opt, oIdx) => (
@@ -1214,8 +1214,8 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                         {/* Customizable Linear Scale (0 - 10) */}
                         {f.type === 'linear_scale' && (
                           <div style={{ marginTop: '0.5rem' }}>
-                            <div className="linear-scale-container" style={{ marginTop: '0.4rem' }}>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{f.validation?.minLabel || 'Low'}</span>
+                            <div className="linear-scale-container mt-sm">
+                              <span className="builder-muted-xs">{f.validation?.minLabel || 'Low'}</span>
                               {Array.from({ length: (f.validation?.max || 5) - (f.validation?.min ?? 1) + 1 }, (_, i) => (f.validation?.min ?? 1) + i).map((num) => {
                                 const currentVal = formData[f.id] !== undefined && formData[f.id] !== null ? Number(formData[f.id]) : undefined;
                                 return (
@@ -1231,7 +1231,7 @@ export const RapidEntry: React.FC<RapidEntryProps> = ({
                                   </label>
                                 );
                               })}
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{f.validation?.maxLabel || 'High'}</span>
+                              <span className="builder-muted-xs">{f.validation?.maxLabel || 'High'}</span>
                             </div>
                           </div>
                         )}

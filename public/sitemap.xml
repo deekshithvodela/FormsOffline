@@ -1,57 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- 1. Home / Landing Root -->
   <url>
     <loc>https://deekshithvodela.github.io/FormsOffline/</loc>
-    <lastmod>2026-08-14</lastmod>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-
-  <!-- 2. Forms Dashboard -->
   <url>
-    <loc>https://deekshithvodela.github.io/FormsOffline/dashboard</loc>
-    <lastmod>2026-08-14</lastmod>
+    <loc>https://deekshithvodela.github.io/FormsOffline/dashboard/</loc>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- 3. Form Builder Canvas -->
   <url>
-    <loc>https://deekshithvodela.github.io/FormsOffline/builder</loc>
-    <lastmod>2026-08-14</lastmod>
+    <loc>https://deekshithvodela.github.io/FormsOffline/builder/</loc>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- 4. Rapid Data Entry Stepper -->
   <url>
-    <loc>https://deekshithvodela.github.io/FormsOffline/entry</loc>
-    <lastmod>2026-08-14</lastmod>
+    <loc>https://deekshithvodela.github.io/FormsOffline/entry/</loc>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- 5. Offline Dataset CMS & Spreadsheet Grid -->
   <url>
-    <loc>https://deekshithvodela.github.io/FormsOffline/cms</loc>
-    <lastmod>2026-08-14</lastmod>
+    <loc>https://deekshithvodela.github.io/FormsOffline/cms/</loc>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- 6. Cross-Device Data Consolidator & Merge Hub -->
   <url>
-    <loc>https://deekshithvodela.github.io/FormsOffline/consolidate</loc>
-    <lastmod>2026-08-14</lastmod>
+    <loc>https://deekshithvodela.github.io/FormsOffline/consolidate/</loc>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-
-  <!-- 7. Help, Interactive User Manual & FAQ -->
   <url>
-    <loc>https://deekshithvodela.github.io/FormsOffline/help</loc>
-    <lastmod>2026-08-14</lastmod>
+    <loc>https://deekshithvodela.github.io/FormsOffline/help/</loc>
+    <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

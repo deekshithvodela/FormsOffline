@@ -38,10 +38,10 @@ export async function parseGoogleFormHtml(htmlContent: string, _url: string): Pr
 
             const items = rawData[1][1];
             if (Array.isArray(items)) {
-              items.forEach((item: any, idx: number) => {
+              items.forEach((item: unknown[], idx: number) => {
                 if (!item || !Array.isArray(item)) return;
-                const fieldTitle = item[1] || `Question ${idx + 1}`;
-                const fieldTypeCode = item[3]; // 0: short text, 1: paragraph, 2: radio, 3: select, 4: checkbox, 5: scale, 8: PAGE BREAK / SECTION
+                const fieldTitle = String(item[1] || `Question ${idx + 1}`);
+                const fieldTypeCode = item[3] as number; // 0: short text, 1: paragraph, 2: radio, 3: select, 4: checkbox, 5: scale, 8: PAGE BREAK / SECTION
 
                 // Handle Google Forms Section Break (fieldTypeCode === 8)
                 if (fieldTypeCode === 8) {
@@ -56,12 +56,12 @@ export async function parseGoogleFormHtml(htmlContent: string, _url: string): Pr
                     sectionCount++;
                     currentFields = [];
                   }
-                  currentSectionTitle = item[1] || `Section ${sectionCount}`;
-                  currentSectionDesc = item[2] || '';
+                  currentSectionTitle = String(item[1] || `Section ${sectionCount}`);
+                  currentSectionDesc = String(item[2] || '');
                   return;
                 }
 
-                const fieldPayload = item[4] && item[4][0];
+                const fieldPayload = item[4] && (item[4] as unknown[])[0] as unknown[] | undefined;
                 let type: FieldType = 'text';
                 const options: FieldOption[] = [];
 
@@ -73,8 +73,8 @@ export async function parseGoogleFormHtml(htmlContent: string, _url: string): Pr
                 else if (fieldTypeCode === 5) type = 'linear_scale';
 
                 // Extract choice options if present
-                if (fieldPayload && Array.isArray(fieldPayload[1])) {
-                  fieldPayload[1].forEach((optArr: any) => {
+                if (Array.isArray(fieldPayload) && Array.isArray(fieldPayload[1])) {
+                  (fieldPayload[1] as unknown[][]).forEach((optArr: unknown[]) => {
                     if (optArr && optArr[0]) {
                       options.push({
                         label: String(optArr[0]),
@@ -88,7 +88,7 @@ export async function parseGoogleFormHtml(htmlContent: string, _url: string): Pr
                 currentFields.push({
                   id: `f_gf_${Date.now()}_${idx}`,
                   type,
-                  label: fieldTitle,
+                  label: String(fieldTitle),
                   options: options.length > 0 ? options : undefined,
                   validation: {
                     required: false,

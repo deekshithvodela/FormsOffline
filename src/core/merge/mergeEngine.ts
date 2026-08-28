@@ -11,12 +11,12 @@ import { computeSHA256 } from '../fingerprint/templateHasher';
 export async function createProvenanceEntry(
   deviceId: string,
   action: 'created' | 'updated' | 'merged',
-  payload: any,
+  payload: unknown,
   authorAlias?: string,
   diffDetails?: {
     changedFields?: string[];
-    previousValues?: Record<string, any>;
-    newValues?: Record<string, any>;
+    previousValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
     diffSummary?: string;
   }
 ): Promise<ProvenanceEntry> {

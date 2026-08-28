@@ -39,7 +39,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
   // In-app parsed states for DOCX, XLSX, and PDF
   const [parsedDocxParagraphs, setParsedDocxParagraphs] = useState<string[] | null>(null);
   const [isDocxParsing, setIsDocxParsing] = useState(false);
-  const [parsedXlsxData, setParsedXlsxData] = useState<{ sheetName: string; rows: any[][] } | null>(null);
+  const [parsedXlsxData, setParsedXlsxData] = useState<{ sheetName: string; rows: (string | number | boolean | null)[][] } | null>(null);
   const [isXlsxParsing, setIsXlsxParsing] = useState(false);
   const [pdfPageUrls, setPdfPageUrls] = useState<string[] | null>(null);
   const [isPdfRendering, setIsPdfRendering] = useState(false);
@@ -186,7 +186,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
         const sheetName = workbook.SheetNames[0];
         if (sheetName) {
           const sheet = workbook.Sheets[sheetName];
-          const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          const rows: (string | number | boolean | null)[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
           setParsedXlsxData({ sheetName, rows: rows.slice(0, 100) });
         } else {
           setParsedXlsxData(null);
@@ -519,17 +519,17 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             {/* Metadata Pills */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               {fileSizeText && (
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '0.2rem 0.45rem', borderRadius: '4px' }}>
+                <span className="media-kbd">
                   {fileSizeText}
                 </span>
               )}
               {fileMimeText && (
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '0.2rem 0.45rem', borderRadius: '4px' }}>
+                <span className="media-kbd">
                   {fileMimeText}
                 </span>
               )}
               {isPdf && pdfPageCount > 0 && (
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '0.2rem 0.45rem', borderRadius: '4px' }}>
+                <span className="media-kbd">
                   {pdfPageCount} {pdfPageCount === 1 ? 'Page' : 'Pages'}
                 </span>
               )}
@@ -700,9 +700,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           }}
         >
           {isPdfRendering ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', margin: '4rem auto' }}>
+            <div className="media-empty-message">
               <div className="spinner" style={{ width: '28px', height: '28px', margin: '0 auto 1rem auto', border: '3px solid var(--border-color)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              <p style={{ fontSize: '0.9rem' }}>Rendering PDF Document in-app...</p>
+              <p className="text-sm">Rendering PDF Document in-app...</p>
             </div>
           ) : isPdf && pdfPageUrls && pdfPageUrls.length > 0 ? (
             /* 1. Native In-App Visual Multi-Page PDF Viewer with True Layout Dimension Zooming */
@@ -774,9 +774,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               ))}
             </div>
           ) : isDocxParsing ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', margin: '4rem auto' }}>
+            <div className="media-empty-message">
               <div className="spinner" style={{ width: '28px', height: '28px', margin: '0 auto 1rem auto', border: '3px solid var(--border-color)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              <p style={{ fontSize: '0.9rem' }}>Parsing Word Document in-app...</p>
+              <p className="text-sm">Parsing Word Document in-app...</p>
             </div>
           ) : isDocx && parsedDocxParagraphs ? (
             /* 2. Native In-App DOCX Document Viewer */
@@ -801,7 +801,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
                   <FileText size={20} color="var(--primary, #6366f1)" />
                   <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{activeItem.fileName}</span>
                 </div>
-                <span className="badge badge-purple" style={{ fontSize: '0.72rem' }}>DOCX In-App View</span>
+                <span className="badge badge-purple text-xs">DOCX In-App View</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
                 {parsedDocxParagraphs.map((paragraph, pIdx) => (
@@ -812,9 +812,9 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
               </div>
             </div>
           ) : isXlsxParsing ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', margin: '4rem auto' }}>
+            <div className="media-empty-message">
               <div className="spinner" style={{ width: '28px', height: '28px', margin: '0 auto 1rem auto', border: '3px solid var(--border-color)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              <p style={{ fontSize: '0.9rem' }}>Parsing Spreadsheet in-app...</p>
+              <p className="text-sm">Parsing Spreadsheet in-app...</p>
             </div>
           ) : isXlsx && parsedXlsxData ? (
             /* 3. Native In-App Spreadsheet (XLSX) Viewer */
@@ -833,7 +833,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#10b981' }}>Sheet: {parsedXlsxData.sheetName}</span>
-                <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>Spreadsheet Preview</span>
+                <span className="badge badge-green text-xs">Spreadsheet Preview</span>
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', color: 'var(--text-primary)' }}>

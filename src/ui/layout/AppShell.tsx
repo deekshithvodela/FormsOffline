@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Database, Shield, PenTool, HardDrive, User, Folder, Combine, Sun, Moon, HelpCircle, X, ChevronRight, ArrowDownToLine } from 'lucide-react';
+import { FileText, Database, Shield, PenTool, HardDrive, User, Folder, Combine, Sun, Moon, HelpCircle, X, ChevronRight, ArrowDownToLine, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { PrivacyModal } from '../components/PrivacyModal';
 import { UserProfileModal } from '../components/UserProfileModal';
+import { DisclaimerModal } from '../components/DisclaimerModal';
 import { InstallAppModal } from '../components/InstallAppModal';
 import { LongPressTooltip } from '../components/LongPressTooltip';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
@@ -17,17 +18,18 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, children }) => {
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isDisclaimerOpen, setIsDisclaimerOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [storageMetrics, setStorageMetrics] = useState<StorageMetrics | null>(null);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>((window as any).__pwaInstallPrompt || null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(window.__pwaInstallPrompt || null);
   const [isStandaloneMode, setIsStandaloneMode] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
+      window.navigator.standalone === true ||
       document.referrer.includes('android-app://')
     );
   });
@@ -58,32 +60,32 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
     const checkStandalone = () => {
       const standalone =
         window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true ||
+        window.navigator.standalone === true ||
         document.referrer.includes('android-app://');
       setIsStandaloneMode(standalone);
     };
     checkStandalone();
 
-    if ((window as any).__pwaInstallPrompt) {
-      setDeferredPrompt((window as any).__pwaInstallPrompt);
+    if (window.__pwaInstallPrompt) {
+      setDeferredPrompt(window.__pwaInstallPrompt);
     }
 
     const handlePromptReady = () => {
-      if ((window as any).__pwaInstallPrompt) {
-        setDeferredPrompt((window as any).__pwaInstallPrompt);
+      if (window.__pwaInstallPrompt) {
+        setDeferredPrompt(window.__pwaInstallPrompt);
       }
     };
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      (window as any).__pwaInstallPrompt = e;
-      setDeferredPrompt(e);
+      window.__pwaInstallPrompt = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     const handleAppInstalled = () => {
       setIsStandaloneMode(true);
       setDeferredPrompt(null);
-      (window as any).__pwaInstallPrompt = null;
+      window.__pwaInstallPrompt = null;
     };
 
     window.addEventListener('pwa_prompt_ready', handlePromptReady);
@@ -106,7 +108,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
           setIsStandaloneMode(true);
         }
         setDeferredPrompt(null);
-        (window as any).__pwaInstallPrompt = null;
+        window.__pwaInstallPrompt = null;
       } catch (err) {
         console.error('Failed to trigger PWA install prompt:', err);
         setIsInstallModalOpen(true);
@@ -153,7 +155,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
     };
   }, []);
 
-  const navItems: { id: 'dashboard' | 'builder' | 'entry' | 'cms' | 'import' | 'help'; title: string; desc: string; icon: any }[] = [
+  const navItems: { id: 'dashboard' | 'builder' | 'entry' | 'cms' | 'import' | 'help'; title: string; desc: string; icon: React.ComponentType<{ size?: number | string }> }[] = [
     { id: 'dashboard', title: 'Forms Dashboard', desc: 'Manage offline templates & launch data capture', icon: Folder },
     { id: 'builder', title: 'Form Builder', desc: 'Author zero-backend forms with section branching', icon: PenTool },
     { id: 'entry', title: 'Rapid Entry', desc: 'High-speed offline form response collector', icon: FileText },
@@ -278,15 +280,35 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
               href="https://linktr.ee/deekshithvodela"
               target="_blank"
               rel="noopener noreferrer"
+              className="footer-author-link"
             >
               Deekshith Vodela
-            </a>{' '}
-            • 100% Offline & Privacy-First • MIT License
+            </a>
           </span>
+          <span className="footer-divider">•</span>
+          <button 
+            className="footer-link-btn" 
+            onClick={() => setIsPrivacyOpen(true)}
+            title="View Zero-Telemetry Privacy Policy"
+          >
+            <ShieldCheck size={13} color="var(--accent-green)" />
+            <span>Privacy</span>
+          </button>
+          <span className="footer-divider">•</span>
+          <button 
+            className="footer-link-btn" 
+            onClick={() => setIsDisclaimerOpen(true)}
+            title="View Limitation of Liability & Data Safety Legal Disclaimer"
+          >
+            <AlertTriangle size={13} color="var(--accent-amber)" />
+            <span>Disclaimer & Limitation of Liability</span>
+          </button>
+          <span className="footer-divider">•</span>
+          <span className="footer-license">MIT License</span>
         </div>
         <div className="footer-meta-right">
           <span className="badge badge-purple">v1.1.0</span>
-          <span>IndexedDB Local Storage</span>
+          <span className="footer-storage-tag">IndexedDB Local Storage</span>
         </div>
       </footer>
 
@@ -345,6 +367,7 @@ export const AppShell: React.FC<AppShellProps> = ({ activeTab, onSelectTab, chil
       )}
 
       <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+      <DisclaimerModal isOpen={isDisclaimerOpen} onClose={() => setIsDisclaimerOpen(false)} />
       <UserProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}

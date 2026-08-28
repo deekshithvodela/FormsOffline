@@ -97,7 +97,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     overscan: 10
   });
 
-  const renderCellContent = (f: FormField, val: any, sub?: FormSubmission) => {
+  const renderCellContent = (f: FormField, val: unknown, sub?: FormSubmission) => {
     if (val === undefined || val === null || val === '') {
       return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>—</span>;
     }
@@ -125,7 +125,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     if (f.type === 'linear_scale') {
       return (
         <span className="badge badge-purple" style={{ fontSize: '0.78rem' }}>
-          Scale: {val}
+          Scale: {String(val)}
         </span>
       );
     }
@@ -133,7 +133,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     if (f.type === 'signature') {
       if (typeof val === 'string' && val.startsWith('data:image')) {
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="flex-center-gap-sm">
             <img
               src={val}
               alt="Signature"
@@ -146,7 +146,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
               })}
               title="Click to view full signature"
             />
-            <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>Signed</span>
+            <span className="badge badge-green text-xs">Signed</span>
           </div>
         );
       }
@@ -158,7 +158,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     }
 
     if (f.type === 'file_upload') {
-      const filesArray: any[] = Array.isArray(val) ? val : (val && typeof val === 'object' && val.data ? [val] : []);
+      const filesArray: { name?: string; data?: string; size?: number; type?: string }[] = Array.isArray(val) ? val : (val && typeof val === 'object' && (val as Record<string, unknown>).data ? [val as { name?: string; data?: string; size?: number; type?: string }] : []);
       const count = filesArray.length;
       const firstName = filesArray[0]?.name || (typeof filesArray[0] === 'string' ? 'File' : 'Attachment');
 
@@ -203,7 +203,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
     }
 
     if (f.type === 'camera_photo') {
-      const photos = Array.isArray(val) ? val : (val && typeof val === 'object' && val.data ? [val] : []);
+      const photos: { name?: string; data?: string; size?: number; type?: string; capturedAt?: string }[] = Array.isArray(val) ? val : (val && typeof val === 'object' && (val as Record<string, unknown>).data ? [val as { name?: string; data?: string; size?: number; type?: string; capturedAt?: string }] : []);
       if (photos.length > 0) {
         const firstPhoto = photos[0];
         const count = photos.length;
@@ -217,7 +217,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
         }));
 
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="flex-center-gap-sm">
             <img
               src={firstPhoto.data}
               alt="Photo"
@@ -244,7 +244,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
         );
       }
       return val ? (
-        <span className="badge badge-purple" style={{ fontSize: '0.72rem' }}>📷 Attached</span>
+        <span className="badge badge-purple text-xs">📷 Attached</span>
       ) : (
         <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>
       );
@@ -378,12 +378,12 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" onClick={() => setIsGalleryOpen(true)} style={{ padding: '0.65rem 1.25rem' }}>
+            <button className="btn btn-primary pad-modal" onClick={() => setIsGalleryOpen(true)}>
               <Folder size={18} />
               <span>Select a Form Template</span>
             </button>
             {onNavigateToDashboard && (
-              <button className="btn btn-outline" onClick={onNavigateToDashboard} style={{ padding: '0.65rem 1.25rem' }}>
+              <button className="btn btn-outline pad-modal" onClick={onNavigateToDashboard}>
                 Go to Dashboard
               </button>
             )}
@@ -427,11 +427,10 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
             {onNavigateToDashboard && (
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline btn-sm cms-toolbar-btn"
                 onClick={onNavigateToDashboard}
                 title="Back to All Forms Dashboard"
                 aria-label="All Forms Dashboard"
-                style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
               >
                 <Folder size={14} color="var(--primary)" />
                 <span>All Forms</span>
@@ -447,7 +446,6 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
               }}
               title="Switch to another form dataset"
               aria-label="Switch Form Dataset"
-              style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
             >
               <Layers size={14} color="var(--text-secondary)" />
               <span>Switch Form</span>
@@ -516,13 +514,12 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
 
         {/* Row 3: Action Buttons (New Record + Export Dropdown + Bulk Delete) */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="flex-center-gap-sm">
             {selectedTemplate && onNavigateToEntry && (
               <button
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm cms-toolbar-btn"
                 onClick={() => onNavigateToEntry(selectedTemplate)}
                 title="Enter New Record for this Form"
-                style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', borderRadius: '6px' }}
               >
                 <Plus size={14} />
                 <span>Enter New Record</span>
@@ -547,9 +544,9 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
           {/* Unified Share / Export Dropdown Menu */}
           <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
             <button
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline btn-sm cms-toolbar-btn"
               onClick={() => setActiveShareMenuId(activeShareMenuId === 'cms_export' ? null : 'cms_export')}
-              style={{ height: '32px', padding: '0.25rem 0.65rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderRadius: '6px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
               title="Export Dataset Records"
             >
               <Share2 size={13} />
@@ -576,45 +573,40 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
                 }}
               >
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline cms-cell-btn"
                   onClick={() => { handleExportCSV(); setActiveShareMenuId(null); }}
-                  style={{ justifyContent: 'flex-start', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
                 >
                   <Download size={14} color="var(--primary)" />
                   <span>CSV Spreadsheet (.csv)</span>
                 </button>
 
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline cms-cell-btn"
                   onClick={() => { handleExportXLSX(); setActiveShareMenuId(null); }}
-                  style={{ justifyContent: 'flex-start', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
                 >
                   <Download size={14} color="var(--accent-green)" />
                   <span>Excel Workbook (.xlsx)</span>
                 </button>
 
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline cms-cell-btn"
                   onClick={() => { handleExportZIPPackage(); setActiveShareMenuId(null); }}
-                  style={{ justifyContent: 'flex-start', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
                 >
                   <Archive size={14} color="var(--accent-amber)" />
                   <span>ZIP Package (Excel + Files)</span>
                 </button>
 
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline cms-cell-btn"
                   onClick={() => { handleExportFormDataPackage(); setActiveShareMenuId(null); }}
-                  style={{ justifyContent: 'flex-start', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
                 >
                   <Package size={14} color="var(--accent-purple)" />
                   <span>Response Package (.formdata)</span>
                 </button>
 
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline cms-cell-btn"
                   onClick={() => { handleExportTemplatePackage(); setActiveShareMenuId(null); }}
-                  style={{ justifyContent: 'flex-start', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
                 >
                   <Share2 size={14} color="var(--primary)" />
                   <span>Template Package (.formsoffline)</span>
@@ -779,23 +771,22 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
           alignItems: 'center'
         }}>
           <div className="card" style={{ width: '420px', maxWidth: '90vw' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div className="cms-toolbar-row">
               <AlertTriangle size={24} color="var(--accent-rose)" />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+              <h3 className="cms-delete-heading">
                 Delete Record #{deleteSingleTarget.id.split('_').pop()}?
               </h3>
             </div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+            <p className="cms-subtitle">
               Are you sure you want to permanently delete this submission record? This action cannot be undone.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <div className="flex-end-gap">
               <button className="btn btn-secondary" onClick={() => setDeleteSingleTarget(null)}>
                 Cancel
               </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary btn-danger"
                 onClick={handleConfirmSingleDelete}
-                style={{ backgroundColor: 'var(--accent-rose)', borderColor: 'var(--accent-rose)' }}
               >
                 Permanently Delete
               </button>
@@ -816,23 +807,22 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
           alignItems: 'center'
         }}>
           <div className="card" style={{ width: '440px', maxWidth: '90vw' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div className="cms-toolbar-row">
               <AlertTriangle size={24} color="var(--accent-rose)" />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+              <h3 className="cms-delete-heading">
                 Bulk Delete {selectedRowIds.size} Records?
               </h3>
             </div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+            <p className="cms-subtitle">
               You are about to permanently delete <strong>{selectedRowIds.size} selected submission records</strong> from IndexedDB. This action cannot be undone.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <div className="flex-end-gap">
               <button className="btn btn-secondary" onClick={() => setIsBulkDeleteModalOpen(false)}>
                 Cancel
               </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary btn-danger"
                 onClick={handleConfirmBulkDelete}
-                style={{ backgroundColor: 'var(--accent-rose)', borderColor: 'var(--accent-rose)' }}
               >
                 Permanently Delete ({selectedRowIds.size})
               </button>
@@ -892,7 +882,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
               </span>
             </div>
 
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.8rem' }}>Submitted Data Values</h4>
+            <h4 className="cms-section-heading">Submitted Data Values</h4>
             <div style={{ display: 'grid', gap: '0.6rem', marginBottom: '1.25rem', background: 'var(--bg-input)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)' }}>
               {fields.map((f) => (
                 <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', flexWrap: 'wrap', gap: '0.25rem' }}>
@@ -902,7 +892,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
               ))}
             </div>
 
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.8rem' }}>Submission Audit History</h4>
+            <h4 className="cms-section-heading">Submission Audit History</h4>
 
             <div style={{ display: 'grid', gap: '0.8rem', marginBottom: '1.25rem' }}>
               {selectedSubmission.provenance.map((prov: ProvenanceEntry, pIdx: number) => (
@@ -951,7 +941,7 @@ export const SpreadsheetGrid: React.FC<SpreadsheetGridProps> = ({
                 <div style={{ marginTop: '0.8rem', display: 'grid', gap: '0.6rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   {selectedSubmission.provenance.map((prov: ProvenanceEntry) => (
                     <div key={prov.id} style={{ background: 'var(--bg-input)', padding: '0.6rem', borderRadius: 'var(--radius-sm)', overflowX: 'hidden' }}>
-                      <div style={{ wordBreak: 'break-all' }}>Device ID: <code style={{ wordBreak: 'break-all' }}>{prov.deviceId}</code></div>
+                      <div className="word-break-all">Device ID: <code className="word-break-all">{prov.deviceId}</code></div>
                       <div style={{ wordBreak: 'break-all', marginTop: '0.2rem' }}>SHA-256: <code style={{ wordBreak: 'break-all', fontSize: '0.72rem' }}>{prov.hash}</code></div>
                     </div>
                   ))}

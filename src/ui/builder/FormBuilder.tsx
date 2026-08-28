@@ -657,9 +657,12 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
       setIsSaveModalOpen(false);
       setNotification(`Form template "${templateTitle}" locked & saved successfully! Canvas reset for next form.`);
       setTimeout(() => setNotification(null), 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'IndexedDB storage write failed';
       console.error('Failed to save template:', err);
-      alert(`Error saving template: ${err?.message || 'IndexedDB storage write failed'}. Please verify mobile browser storage permissions.`);
+      setNotification(`Error: ${message}`);
+      setTimeout(() => setNotification(null), 5000);
+      alert(`Error saving template: ${message}. Please verify mobile browser storage permissions.`);
     }
   };
 
@@ -884,7 +887,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                     <div className="modal-item-info">
                       <GripVertical size={18} color="var(--text-muted)" style={{ cursor: 'grab', flexShrink: 0 }} />
                       <div>
-                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Section {idx + 1}: {sec.title}</span>
+                        <span className="builder-section-heading">Section {idx + 1}: {sec.title}</span>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
                           {sec.fields.length} question(s)
                         </span>
@@ -893,19 +896,17 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
                     <div style={{ display: 'flex', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
                       <button
-                        className="btn btn-outline"
+                        className="btn btn-outline pad-sm"
                         disabled={idx === 0}
                         onClick={() => moveSection(idx, 'up')}
-                        style={{ padding: '0.3rem' }}
                         title="Move Section Up"
                       >
                         <ArrowUp size={14} />
                       </button>
                       <button
-                        className="btn btn-outline"
+                        className="btn btn-outline pad-sm"
                         disabled={idx === sections.length - 1}
                         onClick={() => moveSection(idx, 'down')}
-                        style={{ padding: '0.3rem' }}
                         title="Move Section Down"
                       >
                         <ArrowDown size={14} />
@@ -930,7 +931,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
         <div>
           {/* Top Dedicated Preview Control Bar (Separate Row) */}
           <div className="card" style={{ padding: '0.65rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', borderLeft: '4px solid var(--accent-purple)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="flex-center-gap-md">
               <span className="badge badge-purple" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>Preview Mode</span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Testing form respondent flow</span>
             </div>
@@ -986,7 +987,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                     ) : (
                       <>
                         <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>
-                          {f.label} {f.validation?.required && <span style={{ color: 'var(--accent-rose)' }}>*</span>}
+                          {f.label} {f.validation?.required && <span className="text-rose">*</span>}
                         </label>
                         {f.description && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>{f.description}</p>}
 
@@ -996,11 +997,11 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                           </div>
                         )}
 
-                        {f.type === 'text' && <input type="text" placeholder={f.placeholder || 'Your answer'} style={{ width: '100%' }} />}
+                        {f.type === 'text' && <input type="text" placeholder={f.placeholder || 'Your answer'} className="w-full" />}
                         {f.type === 'textarea' && <textarea placeholder={f.placeholder || 'Your answer'} style={{ width: '100%', minHeight: '80px' }} />}
-                        {f.type === 'number' && <input type="number" placeholder="0" style={{ width: '100%' }} />}
-                        {f.type === 'date' && <input type="date" style={{ width: '100%' }} />}
-                        {f.type === 'time' && <input type="time" style={{ width: '100%' }} />}
+                        {f.type === 'number' && <input type="number" placeholder="0" className="w-full" />}
+                        {f.type === 'date' && <input type="date" className="w-full" />}
+                        {f.type === 'time' && <input type="time" className="w-full" />}
                         {f.type === 'signature' && (
                           <div style={{ border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                             <Edit3 size={24} style={{ marginBottom: '0.4rem' }} />
@@ -1008,16 +1009,16 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                           </div>
                         )}
                         {f.type === 'location' && (
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div className="flex-gap-sm">
                             <MapPin size={20} color="var(--primary)" />
-                            <input type="text" placeholder="Enter Administrative Region / City..." style={{ width: '100%' }} />
+                            <input type="text" placeholder="Enter Administrative Region / City..." className="w-full" />
                           </div>
                         )}
 
                         {f.type === 'radio' && (
-                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          <div className="grid-gap-sm">
                             {(f.options || []).map((opt, oIdx) => (
-                              <label key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <label key={oIdx} className="builder-clickable-row">
                                 <input
                                   type="radio"
                                   name={`preview_${f.id}`}
@@ -1031,9 +1032,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         )}
 
                         {f.type === 'checkbox' && (
-                          <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          <div className="grid-gap-sm">
                             {(f.options || []).map((opt, oIdx) => (
-                              <label key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <label key={oIdx} className="builder-clickable-row">
                                 <input type="checkbox" value={opt.value} />
                                 <span>{opt.label}</span>
                               </label>
@@ -1044,7 +1045,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         {f.type === 'select' && (
                           <select
                             onChange={(e) => setPreviewFormData({ ...previewFormData, [f.id]: e.target.value })}
-                            style={{ width: '100%' }}
+                            className="w-full"
                           >
                             <option value="">Choose an option...</option>
                             {(f.options || []).map((opt, oIdx) => (
@@ -1056,15 +1057,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         {/* Customizable Linear Scale (0 - 10 bounds) */}
                         {f.type === 'linear_scale' && (
                           <div style={{ marginTop: '0.5rem' }}>
-                            <div className="linear-scale-container" style={{ marginTop: '0.4rem' }}>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{f.validation?.minLabel || 'Low'}</span>
+                            <div className="linear-scale-container mt-sm">
+                              <span className="builder-muted-xs">{f.validation?.minLabel || 'Low'}</span>
                               {Array.from({ length: (f.validation?.max || 5) - (f.validation?.min ?? 1) + 1 }, (_, i) => (f.validation?.min ?? 1) + i).map((num) => (
                                 <label key={num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', cursor: 'pointer' }}>
                                   <span>{num}</span>
                                   <input type="radio" name={`scale_${f.id}`} value={num} />
                                 </label>
                               ))}
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{f.validation?.maxLabel || 'High'}</span>
+                              <span className="builder-muted-xs">{f.validation?.maxLabel || 'High'}</span>
                             </div>
                           </div>
                         )}
@@ -1088,7 +1089,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
           {/* Section Navigation Buttons */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <div className="flex-gap-sm">
               <button
                 className="btn btn-secondary btn-sm"
                 disabled={previewSectionIndex === 0}
@@ -1203,7 +1204,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         Section {sIdx + 1} of {sections.length}
                       </span>
 
-                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <div className="flex-center-gap-sm">
                         <button
                           className="btn btn-outline btn-icon-square"
                           disabled={sIdx === 0}
@@ -1224,9 +1225,8 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         </button>
                         {sections.length > 1 && (
                           <button
-                            className="btn btn-outline btn-icon-square"
+                            className="btn btn-outline btn-icon-square text-rose"
                             onClick={(e) => { e.stopPropagation(); removeSection(sec.id); }}
-                            style={{ color: 'var(--accent-rose)' }}
                             title="Delete Section"
                             aria-label="Delete Section"
                           >
@@ -1331,14 +1331,14 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 onTouchMove={handleTouchMove}
                                 onTouchEnd={handleTouchEnd}
                                 onClick={(e) => e.stopPropagation()}
-                                style={{ cursor: 'grab', padding: '0.4rem', touchAction: 'none' }}
+                                className="builder-drag-handle"
                                 title="Drag or touch-drag to reorder"
                               >
                                 <GripVertical size={18} color={isBeingDragged ? 'var(--primary)' : 'var(--text-muted)'} />
                               </div>
                               <div>
-                                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                                  {f.label} {f.validation?.required && <span style={{ color: 'var(--accent-rose)' }}>*</span>}
+                                <span className="builder-section-heading">
+                                  {f.label} {f.validation?.required && <span className="text-rose">*</span>}
                                 </span>
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.75rem' }}>
                                   ({f.type})
@@ -1394,7 +1394,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                         >
                           {/* Drag Handle Dots & Reorder controls */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                            <div className="flex-center-gap-sm">
                               <button
                                 className="btn btn-outline btn-icon-square"
                                 disabled={fIdx === 0}
@@ -1436,7 +1436,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                               onTouchStart={(e) => handleTouchStart(e, sec.id, f.id, fIdx)}
                               onTouchMove={handleTouchMove}
                               onTouchEnd={handleTouchEnd}
-                              style={{ cursor: 'grab', padding: '0.4rem', touchAction: 'none' }}
+                              className="builder-drag-handle"
                               title="Drag or touch-drag to reorder"
                             >
                               <GripVertical size={20} style={{ transform: 'rotate(90deg)', color: 'var(--primary)' }} />
@@ -1464,7 +1464,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                             />
 
                             {/* Row 2: Image Attach Button + Question Type Selector */}
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <div className="flex-gap-sm">
                               <input
                                 type="file"
                                 accept="image/*"
@@ -1524,11 +1524,11 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                             <div style={{ background: 'var(--bg-input)', padding: '0.85rem', borderRadius: 'var(--radius-sm, 6px)', marginBottom: '1rem', border: '1px solid var(--border-color)', display: 'grid', gap: '0.75rem' }}>
                               <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Min Bound:</label>
+                                  <label className="builder-muted-sm">Min Bound:</label>
                                   <select
                                     value={f.validation?.min ?? 1}
                                     onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, min: Number(e.target.value) } })}
-                                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-sm, 6px)' }}
+                                    className="builder-tag-sm"
                                   >
                                     <option value={0}>0</option>
                                     <option value={1}>1</option>
@@ -1538,11 +1538,11 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>to</span>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Max Bound:</label>
+                                  <label className="builder-muted-sm">Max Bound:</label>
                                   <select
                                     value={f.validation?.max ?? 5}
                                     onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, max: Number(e.target.value) } })}
-                                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-sm, 6px)' }}
+                                    className="builder-tag-sm"
                                   >
                                     {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                                       <option key={n} value={n}>{n}</option>
@@ -1552,9 +1552,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                               </div>
 
                               {/* Low Bound & High Bound Labels in Clean Stacked Rows with Prefix Badges */}
-                              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', minWidth: '18px', textAlign: 'right' }}>
+                              <div className="grid-gap-sm">
+                                <div className="flex-center-gap-lg">
+                                  <span className="builder-field-number">
                                     {f.validation?.min ?? 1}.
                                   </span>
                                   <input
@@ -1566,8 +1566,8 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                   />
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', minWidth: '18px', textAlign: 'right' }}>
+                                <div className="flex-center-gap-lg">
+                                  <span className="builder-field-number">
                                     {f.validation?.max ?? 5}.
                                   </span>
                                   <input
@@ -1635,13 +1635,13 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 </div>
                               </div>
 
-                              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)' }}>
+                              <div className="builder-divider-row">
                                 <div>
-                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum number of files:</label>
+                                  <label className="builder-field-label">Maximum number of files:</label>
                                   <select
                                     value={f.validation?.maxFileCount ?? 1}
                                     onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileCount: Number(e.target.value) } })}
-                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                    className="builder-input-sm"
                                   >
                                     <option value={1}>1</option>
                                     <option value={5}>5</option>
@@ -1651,11 +1651,11 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 </div>
 
                                 <div>
-                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum file size:</label>
+                                  <label className="builder-field-label">Maximum file size:</label>
                                   <select
                                     value={f.validation?.maxFileSizeMB ?? 10}
                                     onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileSizeMB: Number(e.target.value) } })}
-                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                    className="builder-input-sm"
                                   >
                                     <option value={1}>1 MB</option>
                                     <option value={5}>5 MB</option>
@@ -1683,13 +1683,13 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 </div>
                               </div>
 
-                              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)' }}>
+                              <div className="builder-divider-row">
                                 <div>
-                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum number of photos / pages:</label>
+                                  <label className="builder-field-label">Maximum number of photos / pages:</label>
                                   <select
                                     value={f.validation?.maxFileCount ?? 5}
                                     onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileCount: Number(e.target.value) } })}
-                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                    className="builder-input-sm"
                                   >
                                     <option value={1}>1 photo (Single side)</option>
                                     <option value={2}>2 photos (Front & Back)</option>
@@ -1701,11 +1701,11 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 </div>
 
                                 <div>
-                                  <label style={{ fontSize: '0.82rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Maximum photo size:</label>
+                                  <label className="builder-field-label">Maximum photo size:</label>
                                   <select
                                     value={f.validation?.maxFileSizeMB ?? 10}
                                     onChange={(e) => updateField(sec.id, f.id, { validation: { ...f.validation, maxFileSizeMB: Number(e.target.value) } })}
-                                    style={{ fontSize: '0.85rem', padding: '0.35rem 0.6rem' }}
+                                    className="builder-input-sm"
                                   >
                                     <option value={5}>5 MB</option>
                                     <option value={10}>10 MB</option>
@@ -1749,10 +1749,10 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                   }}
                                 >
                                   {/* Option Label Row */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-                                    {f.type === 'radio' && <Circle size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
-                                    {f.type === 'checkbox' && <CheckSquare size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
-                                    {f.type === 'select' && <List size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
+                                  <div className="flex-center-gap-lg">
+                                    {f.type === 'radio' && <Circle size={16} color="var(--text-muted)" className="flex-shrink-0" />}
+                                    {f.type === 'checkbox' && <CheckSquare size={16} color="var(--text-muted)" className="flex-shrink-0" />}
+                                    {f.type === 'select' && <List size={16} color="var(--text-muted)" className="flex-shrink-0" />}
 
                                     <input
                                       ref={(el) => { optionInputRefs.current[`${f.id}_${oIdx}`] = el; }}
@@ -1784,7 +1784,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                   {/* Option-Based Branching Dropdown ("Go to section based on answer") */}
                                   {f.showSectionBranching && supportsBranching && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: '1.5rem', width: 'calc(100% - 1.5rem)', boxSizing: 'border-box' }}>
-                                      <ArrowUpRight size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+                                      <ArrowUpRight size={14} color="var(--primary)" className="flex-shrink-0" />
                                       <select
                                         value={opt.targetSectionId || 'NEXT'}
                                         onChange={(e) => updateOption(sec.id, f.id, oIdx, { targetSectionId: e.target.value })}
@@ -1816,7 +1816,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                 </div>
                               ))}
 
-                              <div style={{ marginTop: '0.4rem' }}>
+                              <div className="mt-sm">
                                 <button
                                   className="btn btn-outline"
                                   onClick={(e) => {
@@ -1834,7 +1834,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
                           {/* Bottom Card Action Toolbar */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                            <div className="flex-center-gap-sm">
                               <button
                                 className="btn btn-outline btn-icon-square"
                                 onClick={(e) => {
@@ -1848,20 +1848,19 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                               </button>
 
                               <button
-                                className="btn btn-outline btn-icon-square"
+                                className="btn btn-outline btn-icon-square text-rose"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeField(sec.id, f.id);
                                 }}
                                 title="Delete Question"
                                 aria-label="Delete Question"
-                                style={{ color: 'var(--accent-rose)' }}
                               >
                                 <Trash2 size={15} />
                               </button>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div className="flex-center-gap-md">
                               {f.type !== 'title_block' && (
                                 <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', userSelect: 'none' }}>
                                   <input
@@ -1925,7 +1924,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                       padding: '0.4rem'
                                     }}
                                   >
-                                    <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', cursor: 'pointer' }}>
+                                    <label className="builder-option-row">
                                       <input
                                         type="checkbox"
                                         checked={f.showDescription || false}
@@ -1938,7 +1937,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
                                     </label>
 
                                     {supportsBranching && (
-                                      <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', cursor: 'pointer' }}>
+                                      <label className="builder-option-row">
                                         <input
                                           type="checkbox"
                                           checked={f.showSectionBranching || false}
@@ -1990,10 +1989,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
             <div className="builder-action-palette">
               <LongPressTooltip label="Add Question">
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline pad-md"
                   onClick={() => addFieldToActiveSection('text')}
                   title="Add Question to Active Section"
-                  style={{ padding: '0.6rem' }}
                 >
                   <Plus size={20} color="var(--primary)" />
                 </button>
@@ -2001,10 +1999,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
               <LongPressTooltip label="Add Title Block">
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline pad-md"
                   onClick={() => addFieldToActiveSection('title_block')}
                   title="Add Title & Description Block"
-                  style={{ padding: '0.6rem' }}
                 >
                   <Type size={20} color="var(--accent-amber)" />
                 </button>
@@ -2012,10 +2009,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialTemplate }) => 
 
               <LongPressTooltip label="Add Section Break">
                 <button
-                  className="btn btn-outline"
+                  className="btn btn-outline pad-md"
                   onClick={addSection}
                   title="Add Section Break"
-                  style={{ padding: '0.6rem' }}
                 >
                   <Layers size={20} color="var(--accent-blue)" />
                 </button>

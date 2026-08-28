@@ -37,8 +37,8 @@ export const DataConsolidator: React.FC = () => {
       const result = await importPackageFile(file);
       setImportStatus(result.message);
       db.templates.toArray().then(setTemplates);
-    } catch (err: any) {
-      setErrorStatus(err.message || 'Invalid package file format.');
+    } catch (err: unknown) {
+      setErrorStatus(err instanceof Error ? err.message : 'Invalid package file format.');
     } finally {
       e.target.value = '';
     }
@@ -187,7 +187,7 @@ export const DataConsolidator: React.FC = () => {
           <Combine size={26} color="var(--accent-purple)" />
           <div>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Multi-Device Response Consolidator</h2>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <span className="builder-muted-xs">
               Combine response packages (<code>.formdata</code>) collected across multiple offline devices into a single Master dataset
             </span>
           </div>
@@ -215,7 +215,7 @@ export const DataConsolidator: React.FC = () => {
               multiple
               accept=".formdata,.json,.zip"
               onChange={handleMultiFileConsolidatorUpload}
-              style={{ display: 'none' }}
+              className="d-none"
             />
           </label>
 
@@ -261,9 +261,9 @@ export const DataConsolidator: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
         {/* Direct Package Importer */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div className="consolidator-section-row">
             <Upload size={22} color="var(--primary)" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Import / Load Package</h2>
+            <h2 className="consolidator-heading">Import / Load Package</h2>
           </div>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
@@ -283,7 +283,7 @@ export const DataConsolidator: React.FC = () => {
           >
             <FileText size={28} color="var(--text-muted)" style={{ marginBottom: '0.3rem' }} />
             <span style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem' }}>Select File to Import</span>
-            <input type="file" accept=".zip,.json,.formsoffline,.formdata,.formbackup" onChange={handleFileUpload} style={{ display: 'none' }} />
+            <input type="file" accept=".zip,.json,.formsoffline,.formdata,.formbackup" onChange={handleFileUpload} className="d-none" />
           </label>
 
           {importStatus && (
@@ -303,9 +303,9 @@ export const DataConsolidator: React.FC = () => {
 
         {/* Form & Response Package Exporter */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div className="consolidator-section-row">
             <Share2 size={22} color="var(--primary)" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Export Form Package</h2>
+            <h2 className="consolidator-heading">Export Form Package</h2>
           </div>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
@@ -342,15 +342,15 @@ export const DataConsolidator: React.FC = () => {
               </div>
             </div>
           ) : (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No form templates available.</p>
+            <p className="builder-muted-xs">No form templates available.</p>
           )}
         </div>
 
         {/* Database Backup Card */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div className="consolidator-section-row">
             <Database size={22} color="var(--accent-green)" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Full Database Backup</h2>
+            <h2 className="consolidator-heading">Full Database Backup</h2>
           </div>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.85rem' }}>

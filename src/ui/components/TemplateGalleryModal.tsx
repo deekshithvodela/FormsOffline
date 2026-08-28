@@ -116,7 +116,7 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
 
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'date-asc' | 'date-desc' | 'name-asc' | 'name-desc')}
             style={{
               padding: '0.2rem 0.35rem',
               fontSize: '0.76rem',

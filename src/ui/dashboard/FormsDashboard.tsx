@@ -88,8 +88,8 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
       const result = await importPackageFile(file);
       setImportStatus(result.message);
       loadTemplatesAndCounts();
-    } catch (err: any) {
-      setErrorStatus(err.message || 'Failed to import package file.');
+    } catch (err: unknown) {
+      setErrorStatus(err instanceof Error ? err.message : 'Failed to import package file.');
     } finally {
       e.target.value = '';
     }
@@ -158,7 +158,7 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'date-asc' | 'date-desc' | 'name-asc' | 'name-desc')}
               className="dashboard-sort-select"
               style={{
                 height: '34px',
@@ -311,7 +311,7 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
                             <Copy size={15} color="var(--primary)" />
                             <span>Duplicate & Remix</span>
                           </button>
-                          <div style={{ borderTop: '1px solid var(--border-color)' }} />
+                          <div className="border-top" />
                           <button
                             className="template-menu-item"
                             onClick={() => {
@@ -342,7 +342,7 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
                             <Archive size={15} color="var(--accent-amber)" />
                             <span>Export ZIP Package (Excel + Files)</span>
                           </button>
-                          <div style={{ borderTop: '1px solid var(--border-color)' }} />
+                          <div className="border-top" />
                           <button
                             className="template-menu-item danger"
                             onClick={() => {
@@ -368,21 +368,21 @@ export const FormsDashboard: React.FC<FormsDashboardProps> = ({ onNavigate }) =>
 
                   {/* Schema Indicators */}
                   <div className="template-card-stats">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <div className="flex-center-gap-xs">
                       <Layers size={13} color="var(--primary)" />
                       <span>{t.sections.length} Section(s)</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <div className="flex-center-gap-xs">
                       <Hash size={13} color="var(--primary)" />
                       <span>{fieldCount} Field(s)</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <div className="flex-center-gap-xs">
                       <Database size={13} color="var(--accent-green)" />
-                      <strong style={{ color: 'var(--accent-green)' }}>{count} Response(s)</strong>
+                      <strong className="text-green">{count} Response(s)</strong>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <div className="flex-center-gap-xs">
                       <CheckCircle size={13} color="var(--accent-green)" />
-                      <span style={{ color: 'var(--accent-green)' }}>Schema Verified</span>
+                      <span className="text-green">Schema Verified</span>
                     </div>
                   </div>
                 </div>

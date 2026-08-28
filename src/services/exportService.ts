@@ -5,7 +5,7 @@
  * standard CSV, and dynamic SheetJS Excel (.xlsx).
  */
 
-import { FormSubmission, FormTemplate } from '../core/types';
+import { FormSubmission, FormTemplate, UserProfile } from '../core/types';
 import { db } from '../db/database';
 import { canonicalizeJSON } from '../core/fingerprint/canonicalJson';
 
@@ -55,8 +55,8 @@ export function exportToCSV(template: FormTemplate, submissions: FormSubmission[
       }
       
       if (typeof val === 'object') {
-        if ((f.type === 'file_upload' || f.type === 'camera_photo') && val.name) {
-          return `"${String(val.name).replace(/"/g, '""')}"`;
+        if ((f.type === 'file_upload' || f.type === 'camera_photo') && (val as Record<string, unknown>).name) {
+          return `"${String((val as Record<string, unknown>).name).replace(/"/g, '""')}"`;
         }
         return `"${canonicalizeJSON(val).replace(/"/g, '""')}"`;
       }
@@ -110,12 +110,12 @@ export async function exportToXLSX(template: FormTemplate, submissions: FormSubm
       sub.provenance.forEach((prov, pIdx) => {
         const prevValuesStr = prov.previousValues
           ? Object.entries(prov.previousValues)
-              .map(([k, v]) => `${k}: ${typeof v === 'object' ? (v?.name || JSON.stringify(v)) : (v ?? '')}`)
+              .map(([k, v]) => `${k}: ${typeof v === 'object' && v !== null ? ((v as Record<string, unknown>).name || JSON.stringify(v)) : (v ?? '')}`)
               .join(' | ')
           : '';
         const newValuesStr = prov.newValues
           ? Object.entries(prov.newValues)
-              .map(([k, v]) => `${k}: ${typeof v === 'object' ? (v?.name || JSON.stringify(v)) : (v ?? '')}`)
+              .map(([k, v]) => `${k}: ${typeof v === 'object' && v !== null ? ((v as Record<string, unknown>).name || JSON.stringify(v)) : (v ?? '')}`)
               .join(' | ')
           : '';
 
@@ -194,7 +194,7 @@ export async function exportToZIPPackage(template: FormTemplate, submissions: Fo
         const photosArray = Array.isArray(val) ? val : [val];
         const relativePaths: string[] = [];
 
-        photosArray.forEach((photoObj: any, pIdx: number) => {
+        photosArray.forEach((photoObj: { data?: string; type?: string; name?: string }, pIdx: number) => {
           if (photoObj && typeof photoObj === 'object' && photoObj.data && photoObj.data.startsWith('data:image')) {
             const rawExt = photoObj.type?.split('/')[1] || 'jpg';
             const fileExt = rawExt === 'jpeg' ? 'jpg' : rawExt;
@@ -215,7 +215,7 @@ export async function exportToZIPPackage(template: FormTemplate, submissions: Fo
         const filesArray = Array.isArray(val) ? val : [val];
         const relativePaths: string[] = [];
 
-        filesArray.forEach((fileObj: any, fIdx: number) => {
+        filesArray.forEach((fileObj: { data?: string; name?: string } | string, fIdx: number) => {
           if (fileObj && typeof fileObj === 'object' && fileObj.data && fileObj.data.startsWith('data:')) {
             const rawName = fileObj.name || `Upload_${fIdx + 1}.dat`;
             const fileName = `Rec${recShortId}_${rawName}`;
@@ -271,7 +271,7 @@ export function exportFormTemplatePackage(template: FormTemplate): string {
 export async function exportFullDatabaseBackup(
   customTemplates?: FormTemplate[],
   customSubmissions?: FormSubmission[],
-  customProfiles?: any[]
+  customProfiles?: UserProfile[]
 ): Promise<string> {
   const templates = customTemplates ?? (await db.templates.toArray());
   const submissions = customSubmissions ?? (await db.submissions.toArray());
@@ -300,7 +300,7 @@ export async function exportFullDatabaseBackup(
 export async function exportFullBackupArchive(
   customTemplates?: FormTemplate[],
   customSubmissions?: FormSubmission[],
-  customProfiles?: any[]
+  customProfiles?: UserProfile[]
 ): Promise<Blob> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
@@ -353,7 +353,7 @@ export async function exportFullBackupArchive(
           const photosArray = Array.isArray(val) ? val : [val];
           const relativePaths: string[] = [];
 
-          photosArray.forEach((photoObj: any, pIdx: number) => {
+          photosArray.forEach((photoObj: { data?: string; type?: string; name?: string }, pIdx: number) => {
             if (photoObj && typeof photoObj === 'object' && photoObj.data && photoObj.data.startsWith('data:image')) {
               const rawExt = photoObj.type?.split('/')[1] || 'jpg';
               const fileExt = rawExt === 'jpeg' ? 'jpg' : rawExt;
@@ -374,7 +374,7 @@ export async function exportFullBackupArchive(
           const filesArray = Array.isArray(val) ? val : [val];
           const relativePaths: string[] = [];
 
-          filesArray.forEach((fileObj: any, fIdx: number) => {
+          filesArray.forEach((fileObj: { data?: string; name?: string } | string, fIdx: number) => {
             if (fileObj && typeof fileObj === 'object' && fileObj.data && fileObj.data.startsWith('data:')) {
               const rawName = fileObj.name || `Upload_${fIdx + 1}.dat`;
               const fileName = `${safeTitle}_Rec${recShortId}_${rawName}`;
@@ -441,7 +441,19 @@ export async function importPackageFile(file: File): Promise<ImportResult> {
   return await restoreParsedPackage(parsed);
 }
 
-export async function restoreParsedPackage(parsed: any, customDb?: any): Promise<ImportResult> {
+export async function restoreParsedPackage(
+  parsed: {
+    format?: string;
+    template?: FormTemplate;
+    submissions?: FormSubmission[];
+    database?: {
+      templates?: FormTemplate[];
+      submissions?: FormSubmission[];
+      userProfile?: UserProfile[];
+    };
+  },
+  customDb?: typeof db
+): Promise<ImportResult> {
   const targetDb = customDb ?? (typeof indexedDB !== 'undefined' ? db : null);
 
   if (parsed.format === 'FormsOffline_Template' && parsed.template) {

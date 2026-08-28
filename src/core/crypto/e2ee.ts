@@ -30,7 +30,7 @@ export async function deriveKey(passphrase: string, salt: Uint8Array): Promise<C
   );
 }
 
-export async function encryptPayload(data: any, passphrase: string): Promise<string> {
+export async function encryptPayload(data: unknown, passphrase: string): Promise<string> {
   const jsonString = typeof data === 'string' ? data : canonicalizeJSON(data);
   const encoder = new TextEncoder();
   const payloadBytes = encoder.encode(jsonString);
@@ -55,7 +55,7 @@ export async function encryptPayload(data: any, passphrase: string): Promise<str
   return btoa(String.fromCharCode(...combined));
 }
 
-export async function decryptPayload(ciphertextBase64: string, passphrase: string): Promise<any> {
+export async function decryptPayload(ciphertextBase64: string, passphrase: string): Promise<unknown> {
   const binaryString = atob(ciphertextBase64);
   const combined = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {

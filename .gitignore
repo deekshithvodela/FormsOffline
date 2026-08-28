@@ -4,4 +4,7 @@ dev-dist
 reports
 artifacts
 lighthouse-*.json
+scratch/
+test-results/
+*.log
 .DS_Store

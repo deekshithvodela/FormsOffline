@@ -32,7 +32,7 @@ export const ConflictResolverModal: React.FC<ConflictResolverModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSelectValue = (fieldId: string, value: any) => {
+  const handleSelectValue = (fieldId: string, value: unknown) => {
     setResolutions((prev) => ({ ...prev, [fieldId]: value }));
   };
 

@@ -1,7 +1,7 @@
 # Forms Offline — Project Technical Reference Index
 
 > **Auto-Generated File**: Do not edit manually. Updated automatically via `npm run build:reference`.
-> Last generated: 2026-08-14T06:15:39.611Z
+> Last generated: 2026-08-28T16:14:00.000Z
 
 ## ⚠️ CRITICAL GIT BRANCHING & RELEASE SAFEGUARD DIRECTIVE
 
@@ -28,11 +28,11 @@
 | `src/services/UpdateService.ts` | 45 | 0 | 1 |
 | `src/services/exportService.ts` | 504 | 4 | 1 |
 | `src/services/formLinkParser.ts` | 243 | 1 | 1 |
-| `src/styles/components.css` | 950 | 0 | 0 |
+| `src/styles/components.css` | 1168 | 0 | 0 |
 | `src/styles/theme.css` | 832 | 0 | 0 |
-| `src/ui/builder/FormBuilder.tsx` | 2045 | 1 | 0 |
-| `src/ui/cms/EditSubmissionModal.tsx` | 912 | 1 | 0 |
-| `src/ui/cms/SpreadsheetGrid.tsx` | 979 | 1 | 0 |
+| `src/ui/builder/FormBuilder.tsx` | 2040 | 1 | 0 |
+| `src/ui/cms/EditSubmissionModal.tsx` | 911 | 1 | 0 |
+| `src/ui/cms/SpreadsheetGrid.tsx` | 968 | 1 | 0 |
 | `src/ui/components/CameraCaptureModal.tsx` | 411 | 1 | 0 |
 | `src/ui/components/InstallAppModal.tsx` | 261 | 1 | 0 |
 | `src/ui/components/LongPressTooltip.tsx` | 90 | 1 | 0 |
@@ -43,11 +43,11 @@
 | `src/ui/components/SmartFormImporterModal.tsx` | 173 | 1 | 0 |
 | `src/ui/components/TemplateGalleryModal.tsx` | 295 | 1 | 0 |
 | `src/ui/components/UserProfileModal.tsx` | 131 | 1 | 0 |
-| `src/ui/dashboard/FormsDashboard.tsx` | 452 | 1 | 0 |
-| `src/ui/entry/RapidEntry.tsx` | 1333 | 1 | 0 |
+| `src/ui/dashboard/FormsDashboard.tsx` | 451 | 1 | 0 |
+| `src/ui/entry/RapidEntry.tsx` | 1332 | 1 | 0 |
 | `src/ui/help/HelpTab.tsx` | 435 | 1 | 0 |
 | `src/ui/hooks/useBodyScrollLock.ts` | 42 | 1 | 0 |
-| `src/ui/import/DataConsolidator.tsx` | 376 | 1 | 0 |
+| `src/ui/import/DataConsolidator.tsx` | 375 | 1 | 0 |
 | `src/ui/layout/AppShell.tsx` | 362 | 1 | 0 |
 | `src/ui/merge/ConflictResolverModal.tsx` | 137 | 1 | 0 |
 | `src/vite-env.d.ts` | 2 | 0 | 0 |

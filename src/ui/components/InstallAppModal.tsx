@@ -17,7 +17,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
 }) => {
   useBodyScrollLock(isOpen);
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window);
   const isAndroid = /Android/.test(navigator.userAgent);
   const defaultTab = isIOS ? 'ios' : isAndroid ? 'android' : 'desktop';
   const [activeTab, setActiveTab] = useState<'ios' | 'android' | 'desktop'>(defaultTab);

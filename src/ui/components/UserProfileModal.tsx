@@ -34,6 +34,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
 
   if (!isOpen) return null;
 
+  const handleAliasChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    // Strip zero-width & invisible unicode characters (\u200B-\u200D, \uFEFF, \u00A0, control codes)
+    const cleanInvisible = rawVal.replace(/[\u200B-\u200D\uFEFF\u00A0\u0000-\u001F\u007F-\u009F]/g, '');
+    // Keep only alphanumeric characters, underscores, hyphens, and single spaces
+    const cleanChars = cleanInvisible.replace(/[^a-zA-Z0-9_\- ]/g, '');
+    const singleSpaced = cleanChars.replace(/\s+/g, ' ');
+    setAlias(singleSpaced.slice(0, 32));
+  };
+
   const handleSave = async () => {
     const activeAlias = alias.trim() || 'Operator';
     const activeDeviceId = deviceId || `dev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -93,10 +103,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
             <input
               type="text"
               value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-              placeholder="e.g. Field Operator #14, Rover"
+              onChange={handleAliasChange}
+              placeholder="e.g. Operator 14, Field Inspector"
+              maxLength={32}
               style={{ width: '100%' }}
             />
+            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+              Allowed: Letters, numbers, spaces, hyphens, and underscores (Max 32 chars). Zero-width/invisible characters automatically blocked.
+            </span>
           </div>
 
           <div>

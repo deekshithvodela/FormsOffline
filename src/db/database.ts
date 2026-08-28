@@ -26,7 +26,7 @@ export class FormsOfflineDatabase extends Dexie {
 
 export const db = new FormsOfflineDatabase();
 if (typeof window !== 'undefined') {
-  (window as any).db = db;
+  if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).db = db;
 }
 
 /**
@@ -36,7 +36,7 @@ export async function requestPersistentStorage(): Promise<boolean> {
   if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
     try {
       const isPersisted = await navigator.storage.persist();
-      console.log(`[Storage] Persistent storage granted: ${isPersisted}`);
+      if (import.meta.env.DEV) console.log(`[Storage] Persistent storage granted: ${isPersisted}`);
       return isPersisted;
     } catch (err) {
       console.warn('[Storage] Failed to request persistent storage:', err);

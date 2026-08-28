@@ -314,7 +314,7 @@ export async function seedDefaultTemplates(): Promise<void> {
     };
 
     await db.submissions.put(sampleSub);
-    console.log('[Seeder] Default templates and sample records successfully initialized!');
+    if (import.meta.env.DEV) console.log('[Seeder] Default templates and sample records successfully initialized!');
   } catch (err) {
     console.error('[Seeder] Error seeding default templates:', err);
   }

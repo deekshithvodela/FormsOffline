@@ -5,6 +5,15 @@ All notable changes to **Forms Offline** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-08-28
+
+### Changed
+- **TypeScript Strict Type Safety**: Eliminated all 59 `any`-type usages across the codebase (59 → 0) with proper `unknown`, explicit interfaces, type guards, and runtime narrowing.
+- **Inline Style Extraction**: Extracted ~160 repeated inline `style={{}}` patterns from 8 major components into 45+ reusable CSS classes in `components.css`, covering Builder, CMS, Entry, Media, Dashboard, and Consolidator modules.
+- **Console Statement Audit**: Guarded 5 dev-only `console.log` statements with `import.meta.env.DEV` checks; preserved 22 legitimate error/warning boundaries.
+- **CI Fix**: Corrected `android-release.yml` workflow to use `actions/setup-node@v4` instead of the incorrect `actions/checkout@v4`.
+- **Root Cleanup**: Removed stale scratch files and execution plans from git tracking; updated `.gitignore`.
+
 ## [1.1.0] - 2026-08-13
 
 ### Added

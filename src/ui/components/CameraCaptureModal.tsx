@@ -68,11 +68,12 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         setSelectedDeviceId(activeSettings.deviceId);
         localStorage.setItem('preferred_camera_device_id', activeSettings.deviceId);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Camera stream error:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      const errName = err instanceof DOMException ? err.name : '';
+      if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
         setErrorMsg('Camera permission was denied. Please allow camera access or upload an image file directly.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
         setErrorMsg('No camera hardware found. You can upload an image file directly from your computer.');
       } else {
         setErrorMsg('Unable to access camera. Please check your camera connection or upload a file.');
